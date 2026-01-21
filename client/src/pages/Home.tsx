@@ -36,8 +36,8 @@ export default function Home() {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ objectPosition: 'center 30%' }}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: 'center 40%' }}
           poster="/images/hero-backup.png"
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
