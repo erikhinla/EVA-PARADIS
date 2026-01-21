@@ -37,7 +37,7 @@ export default function Home() {
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: 'center 40%' }}
+          style={{ objectPosition: 'center 60%' }}
           poster="/images/hero-backup.png"
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
