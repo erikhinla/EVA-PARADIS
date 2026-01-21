@@ -13,15 +13,14 @@ export default function Home() {
 
   const handleVipClick = () => {
     if (vipCode.trim()) {
-      // Validate code and redirect
       window.open(`https://onlyfans.com/evaparadis/vip?code=${vipCode}`, "_blank");
     }
   };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Full-bleed video background */}
-      <div className="absolute inset-0 z-0">
+      {/* Full-bleed video background - NO BLOCKING */}
+      <div className="fixed inset-0 z-0">
         <video
           autoPlay
           loop
@@ -32,36 +31,36 @@ export default function Home() {
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
         </video>
-        {/* Gradient overlay for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+        {/* MINIMAL gradient overlay - 25% opacity to let video shine through */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/30" />
       </div>
 
-      {/* Content overlay */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
-        {/* Logo/Brand */}
-        <div className="mb-12 text-center animate-fade-in">
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
+      {/* Content overlay - positioned to not block Eva */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16">
+        {/* Logo/Brand - compact and out of the way */}
+        <div className="mb-8 sm:mb-12 text-center">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight drop-shadow-2xl">
             Eva Paradis
           </h1>
-          <div className="h-px w-32 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent" />
+          <div className="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
         </div>
 
-        {/* Entry portals */}
-        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Entry portals - HORIZONTAL, ABOVE THE FOLD, HIGHLY TRANSLUCENT */}
+        <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Premium Portal */}
-          <Card className="group relative overflow-hidden bg-card/80 backdrop-blur-xl border-border/50 hover:border-primary/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             
-            <div className="relative p-8 sm:p-10 lg:p-12 flex flex-col items-center text-center space-y-6">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                <Sparkles className="w-8 h-8 text-primary" />
+            <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-700">
+                <Sparkles className="w-7 h-7 text-primary drop-shadow-lg" />
               </div>
               
-              <div className="space-y-3">
-                <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
                   Premium Access
                 </h2>
-                <p className="text-muted-foreground text-base sm:text-lg max-w-sm mx-auto">
+                <p className="text-white/80 text-sm sm:text-base max-w-xs mx-auto drop-shadow-md">
                   Exclusive content, behind-the-scenes moments, and direct interaction
                 </p>
               </div>
@@ -69,78 +68,97 @@ export default function Home() {
               <Button
                 onClick={handlePremiumClick}
                 size="lg"
-                className="w-full max-w-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-6 rounded-lg shadow-lg hover:shadow-primary/50 transition-all duration-300 group-hover:scale-105"
+                className="w-full max-w-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base sm:text-lg py-5 rounded-lg shadow-2xl hover:shadow-primary/60 transition-all duration-500 hover:scale-105"
               >
                 Enter Premium
               </Button>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span>Instant access</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-white/70">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-lg shadow-primary/50" />
+                <span className="drop-shadow-md">Instant access</span>
               </div>
             </div>
           </Card>
 
           {/* VIP Portal */}
-          <Card className="group relative overflow-hidden bg-card/80 backdrop-blur-xl border-border/50 hover:border-primary/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             
-            <div className="relative p-8 sm:p-10 lg:p-12 flex flex-col items-center text-center space-y-6">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                <Lock className="w-8 h-8 text-primary" />
+            <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:-rotate-12 transition-all duration-700">
+                <Lock className="w-7 h-7 text-primary drop-shadow-lg" />
               </div>
               
-              <div className="space-y-3">
-                <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
                   VIP Experience
                 </h2>
-                <p className="text-muted-foreground text-base sm:text-lg max-w-sm mx-auto">
+                <p className="text-white/80 text-sm sm:text-base max-w-xs mx-auto drop-shadow-md">
                   Ultra-exclusive content reserved for VIP members only
                 </p>
               </div>
 
-              <div className="w-full max-w-xs space-y-4">
+              <div className="w-full max-w-xs space-y-3">
                 <Input
                   type="text"
                   placeholder="Enter unlock code"
                   value={vipCode}
                   onChange={(e) => setVipCode(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
-                  className="bg-background/50 border-border/50 focus:border-primary text-foreground placeholder:text-muted-foreground text-center text-lg py-6 rounded-lg"
+                  className="bg-black/30 backdrop-blur-sm border-white/20 focus:border-primary text-white placeholder:text-white/50 text-center text-base py-5 rounded-lg shadow-lg transition-all duration-300 focus:scale-[1.02]"
                 />
                 
                 <Button
                   onClick={handleVipClick}
                   size="lg"
                   disabled={!vipCode.trim()}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-6 rounded-lg shadow-lg hover:shadow-primary/50 transition-all duration-300 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base sm:text-lg py-5 rounded-lg shadow-2xl hover:shadow-primary/60 transition-all duration-500 hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   Unlock VIP
                 </Button>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Lock className="w-3 h-3" />
-                <span>Code required</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-white/70">
+                <Lock className="w-3 h-3 drop-shadow-md" />
+                <span className="drop-shadow-md">Code required</span>
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Footer tagline */}
-        <div className="mt-16 text-center animate-fade-in-delay">
-          <p className="text-muted-foreground text-sm sm:text-base">
+        {/* Footer tagline - minimal */}
+        <div className="mt-8 sm:mt-12 text-center">
+          <p className="text-white/60 text-xs sm:text-sm drop-shadow-md">
             Choose your experience
           </p>
         </div>
       </div>
 
-      {/* Custom animations */}
+      {/* Fluid micro-animations */}
       <style>{`
-        @keyframes fade-in {
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+        
+        @keyframes shimmer {
+          0% {
+            background-position: -200% center;
+          }
+          100% {
+            background-position: 200% center;
+          }
+        }
+        
+        /* Smooth entrance animations */
+        @keyframes fade-in-up {
           from {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(30px);
           }
           to {
             opacity: 1;
@@ -148,23 +166,8 @@ export default function Home() {
           }
         }
         
-        @keyframes fade-in-delay {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 1s ease-out;
-        }
-        
-        .animate-fade-in-delay {
-          animation: fade-in-delay 1s ease-out 0.3s both;
+        .group:hover .w-14 {
+          animation: float 3s ease-in-out infinite;
         }
       `}</style>
     </div>
