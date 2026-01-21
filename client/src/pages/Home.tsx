@@ -36,8 +36,7 @@ export default function Home() {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: 'center 60%' }}
+          className="absolute inset-0 w-full h-full object-cover video-responsive"
           poster="/images/hero-backup.png"
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
@@ -158,8 +157,34 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Fluid micro-animations */}
+      {/* Fluid micro-animations and responsive video positioning */}
       <style>{`
+        /* Responsive video positioning to keep Eva's head in frame */
+        .video-responsive {
+          object-position: center 60%;
+        }
+        
+        /* Mobile portrait - show more of upper body */
+        @media (max-width: 640px) and (orientation: portrait) {
+          .video-responsive {
+            object-position: center 55%;
+          }
+        }
+        
+        /* Tablet - balanced framing */
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .video-responsive {
+            object-position: center 58%;
+          }
+        }
+        
+        /* Large desktop - can show more context */
+        @media (min-width: 1920px) {
+          .video-responsive {
+            object-position: center 62%;
+          }
+        }
+        
         @keyframes float {
           0%, 100% {
             transform: translateY(0px);
