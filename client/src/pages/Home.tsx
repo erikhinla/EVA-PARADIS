@@ -69,7 +69,7 @@ export default function Home() {
         </div>
 
         {/* Entry portals - SIDE BY SIDE with flexbox */}
-        <div className="w-full max-w-6xl flex flex-col sm:flex-row justify-center items-center sm:items-stretch gap-4 sm:gap-6 lg:gap-8">
+        <div className="w-full max-w-6xl flex flex-col md:flex-row justify-center items-stretch" style={{ gap: '2rem' }}>
           {/* Premium Portal */}
           <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30 w-full sm:w-auto sm:flex-1 sm:max-w-md">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
