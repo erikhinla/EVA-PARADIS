@@ -68,10 +68,10 @@ export default function Home() {
           <div className="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
         </div>
 
-        {/* Entry portals - HORIZONTAL, ABOVE THE FOLD, HIGHLY TRANSLUCENT */}
-        <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        {/* Entry portals - SIDE BY SIDE with flexbox */}
+        <div className="w-full max-w-6xl flex flex-col sm:flex-row justify-center items-center sm:items-stretch gap-4 sm:gap-6 lg:gap-8">
           {/* Premium Portal */}
-          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30">
+          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30 w-full sm:w-auto sm:flex-1 sm:max-w-md">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             
             <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
@@ -104,7 +104,7 @@ export default function Home() {
           </Card>
 
           {/* VIP Portal */}
-          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30">
+          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30 w-full sm:w-auto sm:flex-1 sm:max-w-md">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             
             <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
@@ -161,27 +161,27 @@ export default function Home() {
       <style>{`
         /* Responsive video positioning to keep Eva's head in frame */
         .video-responsive {
-          object-position: center 60%;
+          object-position: center 20%;
         }
         
         /* Mobile portrait - show more of upper body */
         @media (max-width: 640px) and (orientation: portrait) {
           .video-responsive {
-            object-position: center 55%;
+            object-position: center 15%;
           }
         }
         
         /* Tablet - balanced framing */
         @media (min-width: 641px) and (max-width: 1024px) {
           .video-responsive {
-            object-position: center 58%;
+            object-position: center 18%;
           }
         }
         
         /* Large desktop - can show more context */
         @media (min-width: 1920px) {
           .video-responsive {
-            object-position: center 62%;
+            object-position: center 22%;
           }
         }
         
