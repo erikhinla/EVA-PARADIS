@@ -1,11 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Lock, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Lock, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { useState, useRef } from "react";
 
 export default function Home() {
   const [vipCode, setVipCode] = useState("");
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
 
   const handlePremiumClick = () => {
     window.open("https://onlyfans.com/evaparadis", "_blank");
@@ -22,11 +31,13 @@ export default function Home() {
       {/* Full-bleed video background - NO BLOCKING */}
       <div className="fixed inset-0 z-0">
         <video
+          ref={videoRef}
           autoPlay
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ objectPosition: 'center 30%' }}
           poster="/images/hero-backup.png"
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
@@ -35,8 +46,21 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/30" />
       </div>
 
+      {/* Audio toggle button */}
+      <button
+        onClick={toggleMute}
+        className="fixed top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/50 hover:border-primary/50 flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+        aria-label={isMuted ? "Unmute video" : "Mute video"}
+      >
+        {isMuted ? (
+          <VolumeX className="w-5 h-5 text-white/80 group-hover:text-primary transition-colors" />
+        ) : (
+          <Volume2 className="w-5 h-5 text-primary group-hover:text-primary/80 transition-colors" />
+        )}
+      </button>
+
       {/* Content overlay - positioned to not block Eva */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16">
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-8">
         {/* Logo/Brand - compact and out of the way */}
         <div className="mb-8 sm:mb-12 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight drop-shadow-2xl">
