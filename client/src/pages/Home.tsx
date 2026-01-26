@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Lock, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 import { useState, useRef } from "react";
 
 export default function Home() {
@@ -28,7 +28,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Full-bleed video background - NO BLOCKING */}
+      {/* Full-bleed video background */}
       <div className="fixed inset-0 z-0">
         <video
           ref={videoRef}
@@ -41,182 +41,172 @@ export default function Home() {
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
         </video>
-        {/* MINIMAL gradient overlay - 25% opacity to let video shine through */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/30" />
+        {/* Minimal gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/25" />
       </div>
 
       {/* Audio toggle button */}
       <button
         onClick={toggleMute}
-        className="fixed top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/50 hover:border-primary/50 flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+        className="fixed top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 hover:border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 group"
         aria-label={isMuted ? "Unmute video" : "Mute video"}
       >
         {isMuted ? (
-          <VolumeX className="w-5 h-5 text-white/80 group-hover:text-primary transition-colors" />
+          <VolumeX className="w-5 h-5 text-white/60 group-hover:text-white/80 transition-colors" />
         ) : (
-          <Volume2 className="w-5 h-5 text-primary group-hover:text-primary/80 transition-colors" />
+          <Volume2 className="w-5 h-5 text-white/80 group-hover:text-white/60 transition-colors" />
         )}
       </button>
 
-      {/* Content overlay - positioned to not block Eva */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-8">
-        {/* Logo/Brand - compact and out of the way */}
-        <div className="mb-8 sm:mb-12 text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight drop-shadow-2xl">
+      {/* Content overlay */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
+        {/* Logo/Brand */}
+        <div className="mb-8 text-center">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-2 tracking-tight drop-shadow-2xl">
             Eva Paradis
           </h1>
-          <div className="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
         </div>
 
-        {/* Entry portals - SIDE BY SIDE with flexbox */}
-        <div className="w-full max-w-6xl flex flex-col md:flex-row justify-center items-stretch" style={{ gap: '2rem' }}>
+        {/* Entry portals - COMPACT METALLIC DESIGN */}
+        <div className="w-full max-w-4xl flex flex-col md:flex-row justify-center items-stretch gap-6">
           {/* Premium Portal */}
-          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30 w-full sm:w-auto sm:flex-1 sm:max-w-md">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            
-            <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-700">
-                <Sparkles className="w-7 h-7 text-primary drop-shadow-lg" />
-              </div>
-              
-              <div className="space-y-2">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                  Premium Access
-                </h2>
-                <p className="text-white/80 text-sm sm:text-base max-w-xs mx-auto drop-shadow-md">
-                  Exclusive content, behind-the-scenes moments, and direct interaction
-                </p>
-              </div>
+          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-sm">
+            <div className="relative p-6 flex flex-col items-center text-center space-y-4">
+              <h2 className="text-2xl font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
+                Premium Access
+              </h2>
 
               <Button
                 onClick={handlePremiumClick}
                 size="lg"
-                className="w-full max-w-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base sm:text-lg py-5 rounded-lg shadow-2xl hover:shadow-primary/60 transition-all duration-500 hover:scale-105"
+                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-lg py-6 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 hover:shadow-amber-500/40 metallic-button"
               >
-                Enter Premium
+                Enter Now
               </Button>
-
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-white/70">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-lg shadow-primary/50" />
-                <span className="drop-shadow-md">Instant access</span>
-              </div>
             </div>
           </Card>
 
           {/* VIP Portal */}
-          <Card className="group relative overflow-hidden bg-black/20 backdrop-blur-md border-white/10 hover:border-primary/40 transition-all duration-700 hover:scale-[1.03] hover:bg-black/30 w-full sm:w-auto sm:flex-1 sm:max-w-md">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            
-            <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:-rotate-12 transition-all duration-700">
-                <Lock className="w-7 h-7 text-primary drop-shadow-lg" />
-              </div>
-              
-              <div className="space-y-2">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                  VIP Experience
-                </h2>
-                <p className="text-white/80 text-sm sm:text-base max-w-xs mx-auto drop-shadow-md">
-                  Ultra-exclusive content reserved for VIP members only
-                </p>
-              </div>
+          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-sm">
+            <div className="relative p-6 flex flex-col items-center text-center space-y-4">
+              <h2 className="text-2xl font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
+                VIP Experience
+              </h2>
 
-              <div className="w-full max-w-xs space-y-3">
+              <div className="w-full space-y-3">
                 <Input
                   type="text"
-                  placeholder="Enter unlock code"
+                  placeholder="Unlock code"
                   value={vipCode}
                   onChange={(e) => setVipCode(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
-                  className="bg-black/30 backdrop-blur-sm border-white/20 focus:border-primary text-white placeholder:text-white/50 text-center text-base py-5 rounded-lg shadow-lg transition-all duration-300 focus:scale-[1.02]"
+                  className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-base py-5 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
                 />
                 
                 <Button
                   onClick={handleVipClick}
                   size="lg"
                   disabled={!vipCode.trim()}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base sm:text-lg py-5 rounded-lg shadow-2xl hover:shadow-primary/60 transition-all duration-500 hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="w-full bg-gradient-to-br from-slate-600/80 to-slate-800/80 hover:from-slate-500/90 hover:to-slate-700/90 text-white font-bold text-lg py-6 rounded-md shadow-2xl border border-slate-400/30 transition-all duration-500 hover:scale-105 hover:shadow-slate-500/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 metallic-button"
                 >
-                  Unlock VIP
+                  Unlock Access
                 </Button>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-white/70">
-                <Lock className="w-3 h-3 drop-shadow-md" />
-                <span className="drop-shadow-md">Code required</span>
               </div>
             </div>
           </Card>
         </div>
-
-        {/* Footer tagline - minimal */}
-        <div className="mt-8 sm:mt-12 text-center">
-          <p className="text-white/60 text-xs sm:text-sm drop-shadow-md">
-            Choose your experience
-          </p>
-        </div>
       </div>
 
-      {/* Fluid micro-animations and responsive video positioning */}
+      {/* Metallic styling and responsive video positioning */}
       <style>{`
-        /* Responsive video positioning to keep Eva's head in frame */
+        /* Responsive video positioning to keep Eva's head in frame */}
         .video-responsive {
           object-position: center 20%;
         }
         
-        /* Mobile portrait - show more of upper body */
+        /* Mobile portrait */
         @media (max-width: 640px) and (orientation: portrait) {
           .video-responsive {
             object-position: center 15%;
           }
         }
         
-        /* Tablet - balanced framing */
+        /* Tablet */
         @media (min-width: 641px) and (max-width: 1024px) {
           .video-responsive {
             object-position: center 18%;
           }
         }
         
-        /* Large desktop - can show more context */
+        /* Large desktop */
         @media (min-width: 1920px) {
           .video-responsive {
             object-position: center 22%;
           }
         }
         
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-10px);
-          }
+        /* Metallic card styling */
+        .metallic-card {
+          background: linear-gradient(
+            135deg,
+            rgba(100, 100, 110, 0.15) 0%,
+            rgba(70, 70, 80, 0.2) 50%,
+            rgba(100, 100, 110, 0.15) 100%
+          );
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+            0 10px 40px rgba(0, 0, 0, 0.4);
         }
         
-        @keyframes shimmer {
-          0% {
-            background-position: -200% center;
-          }
-          100% {
-            background-position: 200% center;
-          }
+        .metallic-card:hover {
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+            0 15px 50px rgba(0, 0, 0, 0.5);
         }
         
-        /* Smooth entrance animations */
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        /* Etched text effect */
+        .etched-text {
+          text-shadow: 
+            0 1px 0 rgba(0, 0, 0, 0.8),
+            0 -1px 0 rgba(255, 255, 255, 0.1),
+            0 2px 8px rgba(0, 0, 0, 0.6);
+          letter-spacing: 0.05em;
         }
         
-        .group:hover .w-14 {
-          animation: float 3s ease-in-out infinite;
+        /* Metallic button styling */
+        .metallic-button {
+          position: relative;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+          box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+            0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+        
+        .metallic-button:hover:not(:disabled) {
+          box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.3),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+            0 6px 25px currentColor;
+        }
+        
+        /* Metallic input styling */
+        .metallic-input {
+          box-shadow: 
+            inset 0 2px 4px rgba(0, 0, 0, 0.3),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+        }
+        
+        .metallic-input:focus {
+          box-shadow: 
+            inset 0 2px 4px rgba(0, 0, 0, 0.4),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+            0 0 0 2px rgba(251, 191, 36, 0.2);
         }
       `}</style>
     </div>
