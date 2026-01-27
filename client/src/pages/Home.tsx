@@ -68,18 +68,18 @@ export default function Home() {
         </div>
 
         {/* Entry portals - COMPACT METALLIC DESIGN */}
-        <div className="w-full max-w-4xl flex flex-col md:flex-row justify-center items-stretch gap-6">
+        <div className="w-full max-w-2xl flex flex-col md:flex-row justify-center items-stretch gap-3">
           {/* Premium Portal */}
-          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-sm">
-            <div className="relative p-6 flex flex-col items-center text-center space-y-4">
-              <h2 className="text-2xl font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
+          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs">
+            <div className="relative p-4 flex flex-col items-center text-center space-y-3">
+              <h2 className="text-lg font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
                 Premium Access
               </h2>
 
               <Button
                 onClick={handlePremiumClick}
-                size="lg"
-                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-lg py-6 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 hover:shadow-amber-500/40 metallic-button"
+                size="default"
+                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-base py-4 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 hover:shadow-amber-500/40 metallic-button"
               >
                 Enter Now
               </Button>
@@ -87,27 +87,27 @@ export default function Home() {
           </Card>
 
           {/* VIP Portal */}
-          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-sm">
-            <div className="relative p-6 flex flex-col items-center text-center space-y-4">
-              <h2 className="text-2xl font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
+          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs">
+            <div className="relative p-4 flex flex-col items-center text-center space-y-3">
+              <h2 className="text-lg font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
                 VIP Experience
               </h2>
 
-              <div className="w-full space-y-3">
+              <div className="w-full space-y-2">
                 <Input
                   type="text"
                   placeholder="Unlock code"
                   value={vipCode}
                   onChange={(e) => setVipCode(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
-                  className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-base py-5 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
+                  className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-sm py-3 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
                 />
                 
                 <Button
                   onClick={handleVipClick}
-                  size="lg"
+                  size="default"
                   disabled={!vipCode.trim()}
-                  className="w-full bg-gradient-to-br from-slate-600/80 to-slate-800/80 hover:from-slate-500/90 hover:to-slate-700/90 text-white font-bold text-lg py-6 rounded-md shadow-2xl border border-slate-400/30 transition-all duration-500 hover:scale-105 hover:shadow-slate-500/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 metallic-button"
+                  className="w-full bg-gradient-to-br from-slate-600/80 to-slate-800/80 hover:from-slate-500/90 hover:to-slate-700/90 text-white font-bold text-base py-4 rounded-md shadow-2xl border border-slate-400/30 transition-all duration-500 hover:scale-105 hover:shadow-slate-500/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 metallic-button"
                 >
                   Unlock Access
                 </Button>
