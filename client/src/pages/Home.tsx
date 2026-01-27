@@ -67,10 +67,10 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* Entry portals - COMPACT METALLIC DESIGN */}
-        <div className="w-full max-w-2xl flex flex-col md:flex-row justify-center items-stretch gap-3">
-          {/* Premium Portal */}
-          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs">
+        {/* Entry portals - ASYMMETRIC DESIGN with animations */}
+        <div className="w-full max-w-2xl flex flex-col md:flex-row justify-center items-end gap-3">
+          {/* Premium Portal - moved down to align with VIP bottom */}
+          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs animate-slide-up animation-delay-200">
             <div className="relative p-4 flex flex-col items-center text-center space-y-3">
               <h2 className="text-lg font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
                 Premium Access
@@ -79,35 +79,35 @@ export default function Home() {
               <Button
                 onClick={handlePremiumClick}
                 size="default"
-                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-base py-4 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 hover:shadow-amber-500/40 metallic-button"
+                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-base py-4 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 metallic-button glow-button-amber"
               >
                 Enter Now
               </Button>
             </div>
           </Card>
 
-          {/* VIP Portal */}
-          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs">
-            <div className="relative p-4 flex flex-col items-center text-center space-y-3">
-              <h2 className="text-lg font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
+          {/* VIP Portal - reduced height by 50% */}
+          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs vip-compact animate-slide-up animation-delay-400">
+            <div className="relative p-2 flex flex-col items-center text-center space-y-2">
+              <h2 className="text-sm font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
                 VIP Experience
               </h2>
 
-              <div className="w-full space-y-2">
+              <div className="w-full space-y-1.5">
                 <Input
                   type="text"
                   placeholder="Unlock code"
                   value={vipCode}
                   onChange={(e) => setVipCode(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
-                  className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-sm py-3 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
+                  className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-xs py-2 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
                 />
                 
                 <Button
                   onClick={handleVipClick}
-                  size="default"
+                  size="sm"
                   disabled={!vipCode.trim()}
-                  className="w-full bg-gradient-to-br from-slate-600/80 to-slate-800/80 hover:from-slate-500/90 hover:to-slate-700/90 text-white font-bold text-base py-4 rounded-md shadow-2xl border border-slate-400/30 transition-all duration-500 hover:scale-105 hover:shadow-slate-500/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 metallic-button"
+                  className="w-full bg-gradient-to-br from-slate-600/80 to-slate-800/80 hover:from-slate-500/90 hover:to-slate-700/90 text-white font-bold text-xs py-2 rounded-md shadow-2xl border border-slate-400/30 transition-all duration-500 hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 metallic-button glow-button-slate"
                 >
                   Unlock Access
                 </Button>
@@ -117,7 +117,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Metallic styling and responsive video positioning */}
+      {/* Metallic styling, animations, and responsive video positioning */}
       <style>{`
         /* Responsive video positioning to keep Eva's head in frame */}
         .video-responsive {
@@ -143,6 +143,11 @@ export default function Home() {
           .video-responsive {
             object-position: center 22%;
           }
+        }
+        
+        /* VIP compact tile - 50% height reduction */
+        .vip-compact {
+          max-height: 120px;
         }
         
         /* Metallic card styling */
@@ -193,6 +198,74 @@ export default function Home() {
             inset 0 1px 0 rgba(255, 255, 255, 0.3),
             inset 0 -1px 0 rgba(0, 0, 0, 0.3),
             0 6px 25px currentColor;
+        }
+        
+        /* Glowing button animations */
+        @keyframes glow-amber {
+          0%, 100% {
+            box-shadow: 
+              inset 0 1px 0 rgba(255, 255, 255, 0.2),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+              0 4px 15px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(251, 191, 36, 0.3);
+          }
+          50% {
+            box-shadow: 
+              inset 0 1px 0 rgba(255, 255, 255, 0.2),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+              0 4px 15px rgba(0, 0, 0, 0.4),
+              0 0 25px rgba(251, 191, 36, 0.6);
+          }
+        }
+        
+        @keyframes glow-slate {
+          0%, 100% {
+            box-shadow: 
+              inset 0 1px 0 rgba(255, 255, 255, 0.2),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+              0 4px 15px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(148, 163, 184, 0.3);
+          }
+          50% {
+            box-shadow: 
+              inset 0 1px 0 rgba(255, 255, 255, 0.2),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+              0 4px 15px rgba(0, 0, 0, 0.4),
+              0 0 25px rgba(148, 163, 184, 0.6);
+          }
+        }
+        
+        .glow-button-amber {
+          animation: glow-amber 2s ease-in-out infinite;
+        }
+        
+        .glow-button-slate:not(:disabled) {
+          animation: glow-slate 2s ease-in-out infinite;
+        }
+        
+        /* Entrance animations */
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slide-up {
+          animation: slide-up 0.8s ease-out forwards;
+          opacity: 0;
+        }
+        
+        .animation-delay-200 {
+          animation-delay: 0.2s;
+        }
+        
+        .animation-delay-400 {
+          animation-delay: 0.4s;
         }
         
         /* Metallic input styling */
