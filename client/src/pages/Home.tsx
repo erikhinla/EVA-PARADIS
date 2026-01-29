@@ -159,35 +159,35 @@ export default function Home() {
 
       {/* Metallic styling, animations, and responsive video positioning */}
       <style>{`
-        /* Responsive video positioning to keep Eva's head in frame */}
+         /* Responsive video positioning to keep Eva's head in frame */
         .video-responsive {
-          object-position: center 20%;
+          object-position: center 35%;
         }
         
         /* Mobile portrait */
         @media (max-width: 640px) and (orientation: portrait) {
           .video-responsive {
-            object-position: center 15%;
+            object-position: center 30%;
           }
         }
         
         /* Tablet */
         @media (min-width: 641px) and (max-width: 1024px) {
           .video-responsive {
-            object-position: center 18%;
+            object-position: center 33%;
           }
         }
         
         /* Large desktop */
         @media (min-width: 1920px) {
           .video-responsive {
-            object-position: center 22%;
+            object-position: center 37%;
           }
         }
         
         /* VIP compact tile - 50% height reduction */
         .vip-compact {
-          max-height: 120px;
+          min-height: fit-content;
         }
         
         /* Metallic card styling */
