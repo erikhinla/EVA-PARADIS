@@ -1,13 +1,25 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Volume2, VolumeX } from "lucide-react";
-import { useState, useRef } from "react";
+import { Volume2, VolumeX, Copy, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
   const [vipCode, setVipCode] = useState("");
   const [isMuted, setIsMuted] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    // Detect mobile viewport
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const toggleMute = () => {
     if (videoRef.current) {
@@ -17,12 +29,27 @@ export default function Home() {
   };
 
   const handlePremiumClick = () => {
-    window.open("https://onlyfans.com/evaparadis", "_blank");
+    const url = "https://onlyfans.com/evaparadis?utm_source=landing&utm_medium=premium_portal&utm_campaign=eva_bridge";
+    window.open(url, "_blank");
   };
 
   const handleVipClick = () => {
     if (vipCode.trim()) {
-      window.open(`https://onlyfans.com/evaparadis/vip?code=${vipCode}`, "_blank");
+      const url = `https://onlyfans.com/evaparadis/vip?code=${vipCode}&utm_source=landing&utm_medium=vip_portal&utm_campaign=eva_bridge`;
+      window.open(url, "_blank");
+    }
+  };
+
+  const handleCopyFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setVipCode(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to read clipboard:', err);
     }
   };
 
@@ -39,7 +66,11 @@ export default function Home() {
           className="absolute inset-0 w-full h-full object-cover video-responsive"
           poster="/images/hero-backup.png"
         >
-          <source src="/videos/hero.mp4" type="video/mp4" />
+          {isMobile ? (
+            <source src="/videos/hero-mobile.mp4" type="video/mp4" />
+          ) : (
+            <source src="/videos/hero.mp4" type="video/mp4" />
+          )}
         </video>
         {/* Minimal gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/25" />
@@ -94,14 +125,23 @@ export default function Home() {
               </h2>
 
               <div className="w-full space-y-1.5">
-                <Input
-                  type="text"
-                  placeholder="Unlock code"
-                  value={vipCode}
-                  onChange={(e) => setVipCode(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
-                  className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-xs py-2 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
-                />
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="Unlock code"
+                    value={vipCode}
+                    onChange={(e) => setVipCode(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
+                    className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-xs py-2 pr-8 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
+                  />
+                  <button
+                    onClick={handleCopyFromClipboard}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors"
+                    aria-label="Paste from clipboard"
+                  >
+                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
                 
                 <Button
                   onClick={handleVipClick}
