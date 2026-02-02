@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileVideo, Image as ImageIcon, X } from "lucide-react";
+import { Upload, FileVideo, Image as ImageIcon, X, Download } from "lucide-react";
 import { toast } from "sonner";
 
 interface Asset {
@@ -88,6 +88,18 @@ export default function DashboardContent() {
 
   const removeAsset = (id: string) => {
     setAssets((prev) => prev.filter((asset) => asset.id !== id));
+  };
+
+  const downloadAsset = (asset: Asset) => {
+    const url = URL.createObjectURL(asset.file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = asset.file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded ${asset.file.name}`);
   };
 
   return (
@@ -229,6 +241,15 @@ export default function DashboardContent() {
                             <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
                               Ready
                             </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadAsset(asset)}
+                              className="h-7 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10"
+                            >
+                              <Download className="w-3 h-3 mr-1" />
+                              Download
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"
