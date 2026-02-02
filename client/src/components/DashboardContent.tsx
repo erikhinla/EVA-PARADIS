@@ -12,6 +12,7 @@ interface Asset {
   conceptName: string;
   status: "pending" | "processing" | "ready";
   progress: number;
+  thumbnail: string;
 }
 
 export default function DashboardContent() {
@@ -25,12 +26,16 @@ export default function DashboardContent() {
       return;
     }
 
+    // Generate thumbnail
+    const thumbnailUrl = URL.createObjectURL(file);
+
     const newAsset: Asset = {
       id: Math.random().toString(36).substr(2, 9),
       file,
       conceptName: conceptName.trim(),
       status: "processing",
       progress: 0,
+      thumbnail: thumbnailUrl,
     };
 
     setAssets((prev) => [newAsset, ...prev]);
@@ -177,11 +182,24 @@ export default function DashboardContent() {
                       key={asset.id}
                       className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10"
                     >
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 relative w-20 h-20 rounded-lg overflow-hidden bg-black/40">
                         {asset.file.type.startsWith("video/") ? (
-                          <FileVideo className="w-8 h-8 text-purple-400" />
+                          <>
+                            <video
+                              src={asset.thumbnail}
+                              className="w-full h-full object-cover"
+                              muted
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <FileVideo className="w-6 h-6 text-purple-400" />
+                            </div>
+                          </>
                         ) : (
-                          <ImageIcon className="w-8 h-8 text-blue-400" />
+                          <img
+                            src={asset.thumbnail}
+                            alt={asset.file.name}
+                            className="w-full h-full object-cover"
+                          />
                         )}
                       </div>
 
