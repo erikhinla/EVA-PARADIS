@@ -9,6 +9,7 @@ import {
   AlertCircle, Clock, CheckCircle2, XCircle 
 } from "lucide-react";
 import { toast } from "sonner";
+import ConversionAnalytics from "./ConversionAnalytics";
 
 interface Asset {
   id: string;
@@ -34,6 +35,7 @@ interface PostPackage {
 }
 
 export default function DashboardContent() {
+  const [activeTab, setActiveTab] = useState<"posting" | "analytics">("posting");
   const [assets, setAssets] = useState<Asset[]>([]);
   const [postPackages, setPostPackages] = useState<PostPackage[]>([]);
   const [conceptName, setConceptName] = useState("");
@@ -230,24 +232,57 @@ export default function DashboardContent() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Eva Dashboard</h1>
-              <p className="text-white/60 text-sm">Manual Posting Control</p>
+              <p className="text-white/60 text-sm">
+                {activeTab === "posting" ? "Manual Posting Control" : "Conversion Analytics"}
+              </p>
             </div>
-            <div className="flex gap-6 text-right text-xs text-white/60">
-              <div>
-                <span className="text-amber-400 font-bold">{queuedPackages.length}</span> Queued
+            <div className="flex items-center gap-6">
+              {/* Tab Navigation */}
+              <div className="flex bg-white/5 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab("posting")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === "posting"
+                      ? "bg-amber-500 text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Posting
+                </button>
+                <button
+                  onClick={() => setActiveTab("analytics")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === "analytics"
+                      ? "bg-amber-500 text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Analytics
+                </button>
               </div>
-              <div>
-                <span className="text-green-400 font-bold">{postedPackages.length}</span> Posted
-              </div>
-              <div>
-                <span className="text-red-400 font-bold">{failedPackages.length}</span> Failed
-              </div>
+              {/* Stats */}
+              {activeTab === "posting" && (
+                <div className="flex gap-6 text-right text-xs text-white/60">
+                  <div>
+                    <span className="text-amber-400 font-bold">{queuedPackages.length}</span> Queued
+                  </div>
+                  <div>
+                    <span className="text-green-400 font-bold">{postedPackages.length}</span> Posted
+                  </div>
+                  <div>
+                    <span className="text-red-400 font-bold">{failedPackages.length}</span> Failed
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <div className="container py-8">
+        {activeTab === "analytics" ? (
+          <ConversionAnalytics />
+        ) : (
         <div className="grid gap-6">
           {/* Ingest Module */}
           <Card className="p-6 bg-black/40 backdrop-blur-xl border-white/10">
@@ -643,6 +678,7 @@ export default function DashboardContent() {
             </Card>
           )}
         </div>
+        )}
       </div>
     </div>
   );

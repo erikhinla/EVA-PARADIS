@@ -6,6 +6,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import VipPreview from "./pages/VipPreview";
+import TelegramOptIn from "./pages/TelegramOptIn";
+import EmailCapture from "./pages/EmailCapture";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -13,6 +16,9 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/vip"} component={VipPreview} />
+      <Route path={"/telegram"} component={TelegramOptIn} />
+      <Route path={"/email"} component={EmailCapture} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
