@@ -1,3 +1,4 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,10 @@ import { Volume2, VolumeX, Copy, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
+  // The userAuth hooks provides authentication state
+  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
+  let { user, loading, error, isAuthenticated, logout } = useAuth();
+
   const [vipCode, setVipCode] = useState("");
   const [isMuted, setIsMuted] = useState(true);
   const [copied, setCopied] = useState(false);
