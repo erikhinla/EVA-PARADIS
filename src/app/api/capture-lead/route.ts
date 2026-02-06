@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: Request) {
   try {
@@ -12,42 +17,34 @@ export async function POST(request: Request) {
       );
     }
 
-    // Log the lead capture (replace with your database/CRM integration)
-    console.log("[Lead Captured]", {
-      email,
-      phone: phone || null,
-      utm_params: utm_params || {},
-      timestamp: new Date().toISOString(),
-      ip: request.headers.get("x-forwarded-for") || "unknown",
-      userAgent: request.headers.get("user-agent") || "unknown",
-    });
+    const { data, error } = await supabase
+      .from("leads")
+      .insert({
+        email,
+        phone: phone || null,
+        utm_source: utm_params?.utm_source || null,
+        utm_medium: utm_params?.utm_medium || null,
+        utm_campaign: utm_params?.utm_campaign || null,
+        utm_content: utm_params?.utm_content || null,
+        utm_term: utm_params?.utm_term || null,
+        referrer: utm_params?.referrer || null,
+        ip_address: utm_params?.ip || null,
+        user_agent: utm_params?.userAgent || null,
+      })
+      .select()
+      .single();
 
-    // TODO: Add your integrations here:
-    // - Database insert (Supabase, PlanetScale, etc.)
-    // - Email service (SendGrid, Resend, etc.)
-
-    if (process.env.RESEND_API_KEY) {
-      try {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: "Eva Paradis Hub <onboarding@resend.dev>",
-            to: ["delivered@resend.dev"], // Replace with your email
-            subject: "New Lead Captured!",
-            html: `<p>New lead captured:</p><ul><li>Email: ${email}</li><li>Phone: ${phone || "N/A"}</li></ul>`,
-          }),
-        });
-      } catch (err) {
-        console.error("Resend error:", err);
-      }
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to store lead" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true });
-  } catch {
+    return NextResponse.json({ success: true, lead: data });
+  } catch (err) {
+    console.error("Capture error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
