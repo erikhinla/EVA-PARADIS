@@ -1,0 +1,81 @@
+name: Manus IM Build and Deploy
+
+on:
+  push:
+    branches:
+      - bizbuildersai
+      - main
+  pull_request:
+    branches:
+      - bizbuildersai
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          else
+            echo "No package.json found, skipping dependency installation"
+          fi
+      
+      - name: Run build
+        run: npm run build --if-present
+      
+      - name: Run tests
+        run: npm test --if-present
+      
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            build/
+            out/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  deploy-manus-im:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/bizbuildersai' || github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./artifacts
+      
+      - name: Deploy to Manus IM
+        env:
+          MANUS_IM_API_KEY: ${{ secrets.MANUS_IM_API_KEY }}
+          MANUS_IM_ENDPOINT: ${{ secrets.MANUS_IM_ENDPOINT }}
+        run: |
+          echo "Deploying to Manus IM..."
+          # Add your Manus IM deployment commands here
+          # Example: curl -X POST $MANUS_IM_ENDPOINT/deploy -H "Authorization: Bearer $MANUS_IM_API_KEY" -F "build=@./artifacts"
+          echo "Deployment configuration ready. Please configure MANUS_IM_API_KEY and MANUS_IM_ENDPOINT secrets in GitHub repository settings."

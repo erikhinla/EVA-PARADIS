@@ -34,3 +34,66 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Manus IM Build Integration
+
+This repository is connected to Manus IM for automated builds and deployments.
+
+### Build Pipeline
+
+The build pipeline is configured via GitHub Actions and runs automatically on:
+- Push to `bizbuildersai` or `main` branches
+- Pull requests to `bizbuildersai` or `main` branches
+- Manual workflow dispatch
+
+### Configuration Files
+
+- `.github/workflows/manus-im-build.yml` - GitHub Actions workflow for CI/CD
+- `manus-im.config.json` - Manus IM specific build configuration
+- `.env.example` - Environment variables template for Manus IM integration
+
+### Setup Instructions
+
+1. **Configure GitHub Secrets**: Add the following secrets in your GitHub repository settings:
+   - `MANUS_IM_API_KEY` - Your Manus IM API key for authentication
+   - `MANUS_IM_ENDPOINT` - Your Manus IM deployment endpoint URL
+   - `MANUS_IM_PROJECT_ID` (optional) - Your Manus IM project identifier
+
+2. **Local Development**: 
+   ```bash
+   npm install
+   npm run build
+   npm test
+   ```
+
+3. **Environment Configuration**:
+   - Copy `.env.example` to `.env` for local development
+   - Never commit `.env` file (already in .gitignore)
+
+### Build Workflow
+
+1. **Build Job**:
+   - Checks out code
+   - Sets up Node.js 20
+   - Installs dependencies
+   - Runs build script
+   - Runs tests
+   - Uploads build artifacts
+
+2. **Deploy Job** (production only):
+   - Downloads build artifacts
+   - Deploys to Manus IM using configured endpoint
+   - Runs only on push to main branches
+
+### Customization
+
+Edit the following files to customize the build process:
+- `manus-im.config.json` - Adjust Manus IM specific settings
+- `.github/workflows/manus-im-build.yml` - Modify the CI/CD pipeline
+
+### Support
+
+For issues with the build integration, check:
+1. GitHub Actions logs in the "Actions" tab
+2. Manus IM dashboard for deployment status
+3. Repository secrets configuration

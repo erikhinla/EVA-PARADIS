@@ -1,0 +1,28 @@
+{
+  "name": "eva-paradis",
+  "version": "1.0.0",
+  "description": "Content Hub and Revenue Engine - Manus IM Build Configuration",
+  "build": {
+    "framework": "node",
+    "outputDirectory": "dist",
+    "buildCommand": "npm run build",
+    "installCommand": "npm ci",
+    "devCommand": "npm run dev"
+  },
+  "deploy": {
+    "type": "static",
+    "environment": "production",
+    "autoPublish": true,
+    "regions": ["us-east-1"]
+  },
+  "hooks": {
+    "preBuild": [],
+    "postBuild": [],
+    "preDeploy": [],
+    "postDeploy": []
+  },
+  "environment": {
+    "NODE_VERSION": "20",
+    "NPM_VERSION": "latest"
+  }
+}
