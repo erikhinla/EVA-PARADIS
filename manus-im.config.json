@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "Content Hub and Revenue Engine - Manus IM Build Configuration",
   "build": {
-    "framework": "node",
-    "outputDirectory": "dist",
+    "framework": "nextjs",
+    "outputDirectory": ".next",
     "buildCommand": "npm run build",
     "installCommand": "npm ci",
     "devCommand": "npm run dev"
   },
   "deploy": {
-    "type": "static",
+    "type": "serverless",
     "environment": "production",
     "autoPublish": true,
     "regions": ["us-east-1"]

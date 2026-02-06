@@ -47,9 +47,7 @@ jobs:
         with:
           name: build-artifacts
           path: |
-            dist/
-            build/
-            out/
+            .next/
           retention-days: 7
           if-no-files-found: ignore
 
