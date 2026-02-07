@@ -48,12 +48,12 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-t from-nero via-nero/20 to-transparent" />
 
                     {/* Name + CTA — left-aligned stack */}
-          <div className="relative z-10 flex flex-col items-start gap-3 pb-8 sm:pb-12 px-4 w-full max-w-xs mx-auto animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
+          <div className="relative z-10 flex flex-col items-start gap-3 pb-8 sm:pb-12 px-4 w-full max-w-xs md:max-w-sm lg:max-w-md mx-auto animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
             {/* Stacked name */}
             <div className="w-full">
               <div
                 className="
-                  font-heading text-4xl sm:text-5xl font-bold
+                  font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold
                   tracking-[0.3em] uppercase
                   text-transparent bg-clip-text
                   bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
@@ -66,7 +66,7 @@ export default function Home() {
               </div>
               <div
                 className="
-                  font-heading text-[2.65rem] sm:text-[3.4rem] font-bold
+                  font-heading text-[2.65rem] sm:text-[3.4rem] md:text-[4.2rem] lg:text-[5.5rem] font-bold
                   tracking-[0.18em] uppercase
                   text-transparent bg-clip-text
                   bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
@@ -85,9 +85,9 @@ export default function Home() {
               onClick={handleAccessClick}
               className="
                 group relative w-full
-                h-14 sm:h-16
+                h-14 sm:h-16 md:h-[72px] lg:h-20
                 rounded-xl
-                font-heading text-base sm:text-lg font-bold tracking-[0.15em] uppercase
+                font-heading text-base sm:text-lg md:text-xl lg:text-2xl font-bold tracking-[0.15em] uppercase
                 text-nero
                 bg-gradient-to-b from-[#E8C84A] via-oro to-[#B8941F]
                 shadow-[0_4px_20px_rgba(212,175,55,0.4),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)]
@@ -106,7 +106,7 @@ export default function Home() {
             </button>
 
             {/* Legal line */}
-            <p className="text-[10px] text-cream/40 text-center w-full tracking-wide">
+            <p className="text-[10px] md:text-xs text-cream/40 text-center w-full tracking-wide">
               30 days free then $3/mo. after trial ends.
             </p>
           </div>
