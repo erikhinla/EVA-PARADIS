@@ -17,6 +17,13 @@ export async function POST(request: Request) {
     const userAgent = request.headers.get("user-agent") || "unknown";
     const referer = request.headers.get("referer") || null;
 
+    // Normalize UTM params — frontend sends utm_source, utm_medium, etc.
+    const utmSource = utm_params?.utm_source || utm_params?.source || null;
+    const utmMedium = utm_params?.utm_medium || utm_params?.medium || null;
+    const utmCampaign = utm_params?.utm_campaign || utm_params?.campaign || null;
+    const utmContent = utm_params?.utm_content || utm_params?.content || null;
+    const utmTerm = utm_params?.utm_term || utm_params?.term || null;
+
     // ── Store in Supabase ──────────────────────────────────────────────
     if (isSupabaseConfigured() && supabaseAdmin) {
       const { error: leadError } = await supabaseAdmin
@@ -25,11 +32,11 @@ export async function POST(request: Request) {
           {
             email: email.toLowerCase().trim(),
             phone: phone || null,
-            utm_source: utm_params?.source || null,
-            utm_medium: utm_params?.medium || null,
-            utm_campaign: utm_params?.campaign || null,
-            utm_content: utm_params?.content || null,
-            utm_term: utm_params?.term || null,
+            utm_source: utmSource,
+            utm_medium: utmMedium,
+            utm_campaign: utmCampaign,
+            utm_content: utmContent,
+            utm_term: utmTerm,
             referrer: referer,
             ip_address: ip,
             user_agent: userAgent,
@@ -39,7 +46,6 @@ export async function POST(request: Request) {
 
       if (leadError) {
         console.error("[Lead Capture] Supabase insert error:", leadError);
-        // Don't fail the request — log and continue
       }
 
       // Also log as bridge_event for funnel tracking
@@ -47,9 +53,9 @@ export async function POST(request: Request) {
         .from("bridge_events")
         .insert({
           event_type: "email_capture",
-          utm_source: utm_params?.source || null,
-          utm_medium: utm_params?.medium || null,
-          utm_campaign: utm_params?.campaign || null,
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
           ip_address: ip,
           user_agent: userAgent,
           referrer: referer,
@@ -59,7 +65,6 @@ export async function POST(request: Request) {
         console.error("[Lead Capture] Bridge event insert error:", eventError);
       }
     } else {
-      // Fallback: log to console when Supabase isn't configured
       console.log("[Lead Captured — no DB]", {
         email,
         phone: phone || null,
@@ -86,9 +91,9 @@ export async function POST(request: Request) {
               <ul>
                 <li><strong>Email:</strong> ${email}</li>
                 <li><strong>Phone:</strong> ${phone || "N/A"}</li>
-                <li><strong>Source:</strong> ${utm_params?.source || "direct"}</li>
-                <li><strong>Medium:</strong> ${utm_params?.medium || "N/A"}</li>
-                <li><strong>Campaign:</strong> ${utm_params?.campaign || "N/A"}</li>
+                <li><strong>Source:</strong> ${utmSource || "direct"}</li>
+                <li><strong>Medium:</strong> ${utmMedium || "N/A"}</li>
+                <li><strong>Campaign:</strong> ${utmCampaign || "N/A"}</li>
                 <li><strong>Time:</strong> ${new Date().toISOString()}</li>
               </ul>
             `,
