@@ -30,85 +30,94 @@ export default function Home() {
         {/* ═══════════════════════════════════════════
             HERO — Red carpet video, Eva waist-up
         ═══════════════════════════════════════════ */}
-        <section className="relative flex flex-col items-center justify-end min-h-[85vh] sm:min-h-[90vh] overflow-hidden">
-          {/* Video background */}
+        <section className="relative min-h-[85vh] sm:min-h-[90vh] overflow-hidden">
+          {/* Video background — object-position shifts Eva right on desktop */}
           <video
             ref={videoRef}
             autoPlay
             muted
             loop
             playsInline
-            className="absolute inset-0 w-full h-full object-cover object-top"
+            className="absolute inset-0 w-full h-full object-cover object-top md:object-[75%_top]"
             poster="/hero-poster.jpg"
           >
             <source src="/hero-video.mp4" type="video/mp4" />
           </video>
 
-          {/* Gradient overlay — bottom fade only so Eva stays visible */}
+          {/* Gradient overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-nero via-nero/20 to-transparent" />
+          {/* Left-side darken so text reads clearly on desktop */}
+          <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-nero/70 via-nero/30 to-transparent" />
 
-                    {/* Name + CTA — left-aligned stack */}
-          <div className="relative z-10 flex flex-col items-start gap-3 pb-8 sm:pb-12 px-4 w-full max-w-xs md:max-w-sm lg:max-w-md mx-auto animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
-            {/* Stacked name */}
-            <div className="w-full">
-              <div
+          {/* Content container — bottom on mobile, left-center on desktop */}
+          <div className="
+            relative z-10 flex items-end md:items-center
+            min-h-[85vh] sm:min-h-[90vh]
+            px-5 sm:px-8 md:px-12 lg:px-20
+            pb-8 sm:pb-12 md:pb-0
+          ">
+            {/* Name + CTA block */}
+            <div className="w-full max-w-xs md:max-w-sm lg:max-w-md animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
+              {/* Stacked name */}
+              <div>
+                <div
+                  className="
+                    font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold
+                    tracking-[0.3em] uppercase
+                    text-transparent bg-clip-text
+                    bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
+                    bg-[length:200%_100%]
+                    animate-[shimmer_3s_ease-in-out_infinite]
+                    leading-none
+                  "
+                >
+                  Eva
+                </div>
+                <div
+                  className="
+                    font-heading text-[2.65rem] sm:text-[3.4rem] md:text-[4.2rem] lg:text-[5.5rem] font-bold
+                    tracking-[0.18em] uppercase
+                    text-transparent bg-clip-text
+                    bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
+                    bg-[length:200%_100%]
+                    animate-[shimmer_3s_ease-in-out_infinite]
+                    leading-none mt-1
+                  "
+                >
+                  Paradis
+                </div>
+              </div>
+
+              {/* ACCESS FOR FREE button */}
+              <button
+                onClick={handleAccessClick}
                 className="
-                  font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold
-                  tracking-[0.3em] uppercase
-                  text-transparent bg-clip-text
-                  bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
-                  bg-[length:200%_100%]
-                  animate-[shimmer_3s_ease-in-out_infinite]
-                  leading-none
+                  group relative w-full
+                  h-14 sm:h-16 md:h-[72px] lg:h-20 mt-5
+                  rounded-xl
+                  font-heading text-base sm:text-lg md:text-xl lg:text-2xl font-bold tracking-[0.15em] uppercase
+                  text-nero
+                  bg-gradient-to-b from-[#E8C84A] via-oro to-[#B8941F]
+                  shadow-[0_4px_20px_rgba(212,175,55,0.4),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)]
+                  hover:shadow-[0_6px_30px_rgba(212,175,55,0.6),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]
+                  hover:translate-y-[-1px]
+                  active:translate-y-[1px]
+                  active:shadow-[0_2px_10px_rgba(212,175,55,0.3),inset_0_2px_4px_rgba(0,0,0,0.3)]
+                  transition-all duration-200 ease-out
+                  overflow-hidden
                 "
               >
-                Eva
-              </div>
-              <div
-                className="
-                  font-heading text-[2.65rem] sm:text-[3.4rem] md:text-[4.2rem] lg:text-[5.5rem] font-bold
-                  tracking-[0.18em] uppercase
-                  text-transparent bg-clip-text
-                  bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
-                  bg-[length:200%_100%]
-                  animate-[shimmer_3s_ease-in-out_infinite]
-                  leading-none mt-1
-                  w-full
-                "
-              >
-                Paradis
-              </div>
+                <span className="relative z-10 drop-shadow-[0_1px_0_rgba(255,255,255,0.2)]">
+                  Access for Free
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+              </button>
+
+              {/* Legal line */}
+              <p className="mt-3 text-[10px] md:text-xs text-cream/40 tracking-wide text-center">
+                30 days free then $3/mo. after trial ends.
+              </p>
             </div>
-
-            {/* ACCESS FOR FREE button */}
-            <button
-              onClick={handleAccessClick}
-              className="
-                group relative w-full
-                h-14 sm:h-16 md:h-[72px] lg:h-20
-                rounded-xl
-                font-heading text-base sm:text-lg md:text-xl lg:text-2xl font-bold tracking-[0.15em] uppercase
-                text-nero
-                bg-gradient-to-b from-[#E8C84A] via-oro to-[#B8941F]
-                shadow-[0_4px_20px_rgba(212,175,55,0.4),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)]
-                hover:shadow-[0_6px_30px_rgba(212,175,55,0.6),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]
-                hover:translate-y-[-1px]
-                active:translate-y-[1px]
-                active:shadow-[0_2px_10px_rgba(212,175,55,0.3),inset_0_2px_4px_rgba(0,0,0,0.3)]
-                transition-all duration-200 ease-out
-                overflow-hidden
-              "
-            >
-              <span className="relative z-10 drop-shadow-[0_1px_0_rgba(255,255,255,0.2)]">
-                Access for Free
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-            </button>
-
-            {/* Legal line */}
-            <p className="text-[10px] md:text-xs text-cream/40 text-center w-full tracking-wide">
-              30 days free then $3/mo. after trial ends.
-            </p>
           </div>
         </section>
 
