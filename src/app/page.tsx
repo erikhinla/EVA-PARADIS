@@ -57,12 +57,12 @@ export default function Home() {
             pb-8 sm:pb-12 md:pb-0
           ">
             {/* Name + CTA block */}
-            <div className="w-full max-w-xs md:max-w-sm lg:max-w-md animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
+            <div className="w-full max-w-xs md:max-w-xs lg:max-w-sm animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
               {/* Stacked name */}
               <div>
                 <div
                   className="
-                    font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold
+                    font-heading text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-bold
                     tracking-[0.3em] uppercase
                     text-transparent bg-clip-text
                     bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
@@ -75,7 +75,7 @@ export default function Home() {
                 </div>
                 <div
                   className="
-                    font-heading text-[2.65rem] sm:text-[3.4rem] md:text-[4.2rem] lg:text-[5.5rem] font-bold
+                    font-heading text-[2.65rem] sm:text-[3.4rem] md:text-[3.8rem] lg:text-[4.5rem] font-bold
                     tracking-[0.18em] uppercase
                     text-transparent bg-clip-text
                     bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
@@ -108,7 +108,7 @@ export default function Home() {
                 "
               >
                 <span className="relative z-10 drop-shadow-[0_1px_0_rgba(255,255,255,0.2)]">
-                  Access for Free
+                  Free Access
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
               </button>
