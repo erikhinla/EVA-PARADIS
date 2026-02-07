@@ -1,7 +1,7 @@
-// Build: 2026-02-07T06:48:53.515764
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { Analytics } from "@vercel/analytics/react";
 import { AnalyticsScripts } from "@/components/AnalyticsScripts";
 import { useUtmParams } from "@/hooks/useUtmParams";
@@ -230,6 +230,21 @@ export default function Home() {
               you confirm you are 18+ and agree to view adult content. All content
               is produced by consenting adults.
             </p>
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <Link
+                href="/dashboard"
+                className="text-[9px] uppercase tracking-[0.2em] text-oro/30 hover:text-oro/60 transition-colors"
+              >
+                Command Center
+              </Link>
+              <span className="text-cream/10">·</span>
+              <Link
+                href="/dashboard/compose"
+                className="text-[9px] uppercase tracking-[0.2em] text-oro/30 hover:text-oro/60 transition-colors"
+              >
+                Composer
+              </Link>
+            </div>
             <p className="mt-3 text-[9px] uppercase tracking-[0.2em] text-cream/10">
               &copy; {new Date().getFullYear()} Eva Paradis
             </p>

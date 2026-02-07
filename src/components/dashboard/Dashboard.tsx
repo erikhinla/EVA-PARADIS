@@ -633,6 +633,12 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-4">
           <Link
+            href="/"
+            className="text-[10px] text-neutral-500 uppercase tracking-wider hover:text-white transition-colors"
+          >
+            Landing Page
+          </Link>
+          <Link
             href="/dashboard/compose"
             className="text-[10px] text-neutral-500 uppercase tracking-wider hover:text-white transition-colors"
           >
