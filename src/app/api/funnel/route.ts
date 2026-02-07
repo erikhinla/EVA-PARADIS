@@ -1,39 +1,55 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
+// GET /api/funnel — Return funnel health metrics for dashboard
 export async function GET() {
   try {
-    const [funnel24h, trafficSources] = await Promise.all([
-      supabase.from("funnel_24h").select("*").single(),
-      supabase.from("traffic_sources_24h").select("*"),
-    ]);
-
-    if (funnel24h.error) {
-      console.error("Funnel error:", funnel24h.error);
+    if (!isSupabaseConfigured() || !supabaseAdmin) {
       return NextResponse.json(
-        { error: "Failed to fetch funnel data" },
-        { status: 500 }
+        { error: "Supabase is not configured" },
+        { status: 503 }
       );
     }
 
-    if (trafficSources.error) {
-      console.error("Traffic sources error:", trafficSources.error);
-      return NextResponse.json(
-        { error: "Failed to fetch traffic sources" },
-        { status: 500 }
-      );
-    }
+    // Funnel summary (last 24h)
+    const { data: funnel, error: funnelError } = await supabaseAdmin
+      .from("funnel_24h")
+      .select("*")
+      .single();
+
+    // Traffic sources
+    const { data: sources, error: sourcesError } = await supabaseAdmin
+      .from("traffic_sources_24h")
+      .select("*");
+
+    // Lead count
+    const { data: leadsSummary, error: leadsError } = await supabaseAdmin
+      .from("leads_summary")
+      .select("*")
+      .single();
+
+    if (funnelError) console.error("[Funnel API] Funnel error:", funnelError);
+    if (sourcesError) console.error("[Funnel API] Sources error:", sourcesError);
+    if (leadsError) console.error("[Funnel API] Leads error:", leadsError);
 
     return NextResponse.json({
-      funnel: funnel24h.data,
-      trafficSources: trafficSources.data,
+      funnel: funnel || {
+        total_visits: 0,
+        of_clicks: 0,
+        email_captures: 0,
+        conversions: 0,
+        bridge_ctr: 0,
+      },
+      sources: sources || [],
+      leads: leadsSummary || {
+        total_leads: 0,
+        leads_24h: 0,
+        leads_7d: 0,
+        converted_leads: 0,
+      },
     });
   } catch (err) {
-    console.error("Funnel API error:", err);
+    console.error("[Funnel API] Error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
