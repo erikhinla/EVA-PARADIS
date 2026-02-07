@@ -45,10 +45,27 @@ export default function Home() {
           </video>
 
           {/* Gradient overlay — bottom fade only so Eva stays visible */}
-          <div className="absolute inset-0 bg-gradient-to-t from-nero via-nero/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-nero via-nero/20 to-transparent" />
 
-          {/* CTA cluster — pinned to bottom of hero */}
-          <div className="relative z-10 flex flex-col items-center gap-4 pb-8 sm:pb-12 px-4 w-full max-w-md mx-auto">
+                    {/* Animated name */}
+          <div className="relative z-10 flex flex-col items-center animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
+            <h1
+              className="
+                font-heading text-5xl sm:text-7xl font-bold
+                tracking-[0.2em] uppercase
+                text-transparent bg-clip-text
+                bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
+                bg-[length:200%_100%]
+                animate-[shimmer_3s_ease-in-out_infinite]
+                drop-shadow-[0_2px_20px_rgba(212,175,55,0.3)]
+              "
+            >
+              Eva Paradis
+            </h1>
+          </div>
+
+{/* CTA cluster — pinned to bottom of hero */}
+          <div className="relative z-10 flex flex-col items-center gap-4 pb-8 sm:pb-12 px-4 w-full max-w-md mx-auto animate-[fadeInUp_1.5s_ease-out_0.8s_both]">
             {/* ACCESS FOR FREE button — physical, engraved feel */}
             <button
               onClick={handleAccessClick}
@@ -95,7 +112,7 @@ export default function Home() {
             <div className="flex items-center gap-3 mb-3">
               <div className="h-px w-8 bg-oro/30" />
               <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-oro/60">
-                VEP — Very Eva Paradis
+                THE VAULT
               </span>
               <div className="h-px w-8 bg-oro/30" />
             </div>
@@ -104,7 +121,8 @@ export default function Home() {
               The Vault
             </h2>
             <p className="mt-3 text-sm text-cream/40 max-w-sm">
-              Never released, exclusive content. The things you won&apos;t find anywhere else.
+              Exclusive Content. Never Released.<br />
+              You won&apos;t find it anywhere else.
             </p>
 
             {/* Promo code input */}
