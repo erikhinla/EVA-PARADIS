@@ -54,7 +54,7 @@ export default function Home() {
               <div
                 className="
                   font-heading text-4xl sm:text-5xl font-bold
-                  tracking-[0.25em] uppercase
+                  tracking-[0.3em] uppercase
                   text-transparent bg-clip-text
                   bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
                   bg-[length:200%_100%]
@@ -67,7 +67,7 @@ export default function Home() {
               <div
                 className="
                   font-heading text-[2.65rem] sm:text-[3.4rem] font-bold
-                  tracking-[0.12em] uppercase
+                  tracking-[0.18em] uppercase
                   text-transparent bg-clip-text
                   bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
                   bg-[length:200%_100%]
