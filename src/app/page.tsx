@@ -47,33 +47,47 @@ export default function Home() {
           {/* Gradient overlay — bottom fade only so Eva stays visible */}
           <div className="absolute inset-0 bg-gradient-to-t from-nero via-nero/20 to-transparent" />
 
-                    {/* Animated name */}
-          <div className="relative z-10 flex flex-col items-center animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
-            <h1
-              className="
-                font-heading text-5xl sm:text-7xl font-bold
-                tracking-[0.2em] uppercase
-                text-transparent bg-clip-text
-                bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
-                bg-[length:200%_100%]
-                animate-[shimmer_3s_ease-in-out_infinite]
-                drop-shadow-[0_2px_20px_rgba(212,175,55,0.3)]
-              "
-            >
-              Eva Paradis
-            </h1>
-          </div>
+                    {/* Name + CTA — left-aligned stack */}
+          <div className="relative z-10 flex flex-col items-start gap-3 pb-8 sm:pb-12 px-4 w-full max-w-xs mx-auto animate-[fadeInUp_1.5s_ease-out_0.3s_both]">
+            {/* Stacked name */}
+            <div className="w-full">
+              <div
+                className="
+                  font-heading text-4xl sm:text-5xl font-bold
+                  tracking-[0.25em] uppercase
+                  text-transparent bg-clip-text
+                  bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
+                  bg-[length:200%_100%]
+                  animate-[shimmer_3s_ease-in-out_infinite]
+                  leading-none
+                "
+              >
+                Eva
+              </div>
+              <div
+                className="
+                  font-heading text-[2.65rem] sm:text-[3.4rem] font-bold
+                  tracking-[0.12em] uppercase
+                  text-transparent bg-clip-text
+                  bg-gradient-to-r from-[#B8941F] via-[#F5E6A3] to-[#B8941F]
+                  bg-[length:200%_100%]
+                  animate-[shimmer_3s_ease-in-out_infinite]
+                  leading-none mt-1
+                  w-full
+                "
+              >
+                Paradis
+              </div>
+            </div>
 
-{/* CTA cluster — pinned to bottom of hero */}
-          <div className="relative z-10 flex flex-col items-center gap-4 pb-8 sm:pb-12 px-4 w-full max-w-md mx-auto animate-[fadeInUp_1.5s_ease-out_0.8s_both]">
-            {/* ACCESS FOR FREE button — physical, engraved feel */}
+            {/* ACCESS FOR FREE button */}
             <button
               onClick={handleAccessClick}
               className="
-                group relative w-full max-w-xs
-                h-16 sm:h-[72px]
+                group relative w-full
+                h-14 sm:h-16
                 rounded-xl
-                font-heading text-lg sm:text-xl font-bold tracking-[0.15em] uppercase
+                font-heading text-base sm:text-lg font-bold tracking-[0.15em] uppercase
                 text-nero
                 bg-gradient-to-b from-[#E8C84A] via-oro to-[#B8941F]
                 shadow-[0_4px_20px_rgba(212,175,55,0.4),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)]
@@ -85,17 +99,15 @@ export default function Home() {
                 overflow-hidden
               "
             >
-              {/* Engraved text effect */}
               <span className="relative z-10 drop-shadow-[0_1px_0_rgba(255,255,255,0.2)]">
                 Access for Free
               </span>
-              {/* Shine sweep animation */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
             </button>
 
             {/* Legal line */}
-            <p className="text-[11px] sm:text-xs text-cream/50 text-center leading-relaxed tracking-wide">
-              30 days free then only $3/mo after. Cancel any time, but why would you?
+            <p className="text-[10px] text-cream/40 text-center w-full tracking-wide">
+              30 days free then $3/mo. after trial ends.
             </p>
           </div>
         </section>
@@ -112,7 +124,7 @@ export default function Home() {
             <div className="flex items-center gap-3 mb-3">
               <div className="h-px w-8 bg-oro/30" />
               <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-oro/60">
-                THE VAULT
+                EXCLUSIVE
               </span>
               <div className="h-px w-8 bg-oro/30" />
             </div>
@@ -121,8 +133,7 @@ export default function Home() {
               The Vault
             </h2>
             <p className="mt-3 text-sm text-cream/40 max-w-sm">
-              Exclusive Content. Never Released.<br />
-              You won&apos;t find it anywhere else.
+              Never released content, you won&apos;t find anywhere else.
             </p>
 
             {/* Promo code input */}
