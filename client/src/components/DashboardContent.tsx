@@ -34,6 +34,15 @@ export default function DashboardContent() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [subredditSelections, setSubredditSelections] = useState<Record<number, string>>({});
+  
+  // Manual mode state
+  const [redgifsUrls, setRedgifsUrls] = useState<Record<number, string>>({});
+  const [redditUrls, setRedditUrls] = useState<Record<number, string>>({});
+
+  // Get publishing mode
+  const { data: publishingMode } = trpc.queue.getPublishingMode.useQuery(undefined, {
+    refetchInterval: 60000, // Check mode every minute
+  });
 
   // tRPC queries and mutations
   const { data: assets = [], refetch: refetchAssets } = trpc.assets.list.useQuery(undefined, {
@@ -71,6 +80,26 @@ export default function DashboardContent() {
     },
     onError: (error) => {
       toast.error(`Delete failed: ${error.message}`);
+    },
+  });
+
+  const saveRedGifsUrl = trpc.queue.saveRedGifsUrl.useMutation({
+    onSuccess: () => {
+      refetchPosts();
+      toast.success("RedGifs URL saved - ready for Reddit");
+    },
+    onError: (error) => {
+      toast.error(`Failed to save RedGifs URL: ${error.message}`);
+    },
+  });
+
+  const saveRedditPermalink = trpc.queue.saveRedditPermalink.useMutation({
+    onSuccess: () => {
+      refetchPosts();
+      toast.success("Post marked as published!");
+    },
+    onError: (error) => {
+      toast.error(`Failed to save Reddit URL: ${error.message}`);
     },
   });
 
@@ -149,6 +178,24 @@ export default function DashboardContent() {
     publishToReddit.mutate({ assetId, targetSubreddit });
   };
 
+  const handleSaveRedGifsUrl = (postId: number) => {
+    const url = redgifsUrls[postId];
+    if (!url || !url.trim()) {
+      toast.error("Please enter a RedGifs URL");
+      return;
+    }
+    saveRedGifsUrl.mutate({ postId, redgifsUrl: url.trim() });
+  };
+
+  const handleSaveRedditPermalink = (postId: number) => {
+    const url = redditUrls[postId];
+    if (!url || !url.trim()) {
+      toast.error("Please enter a Reddit URL");
+      return;
+    }
+    saveRedditPermalink.mutate({ postId, redditUrl: url.trim() });
+  };
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -156,11 +203,25 @@ export default function DashboardContent() {
     toast.success("Copied");
   };
 
+  const copyAllForReddit = (title: string, url: string, id: string) => {
+    const text = `Title: ${title}\nURL: ${url}`;
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast.success("Copied title and URL");
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "queued":
         return <Clock className="w-4 h-4 text-amber-400" />;
-      case "posting":
+      case "awaiting_redgifs_url":
+        return <Clock className="w-4 h-4 text-blue-400" />;
+      case "uploading_redgifs":
+        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
+      case "awaiting_reddit_post":
+        return <Clock className="w-4 h-4 text-blue-400" />;
+      case "posting_reddit":
         return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
       case "posted":
         return <CheckCircle2 className="w-4 h-4 text-green-400" />;
@@ -175,7 +236,13 @@ export default function DashboardContent() {
     switch (status) {
       case "queued":
         return "bg-amber-500/20 text-amber-400";
-      case "posting":
+      case "awaiting_redgifs_url":
+        return "bg-blue-500/20 text-blue-400";
+      case "uploading_redgifs":
+        return "bg-blue-500/20 text-blue-400";
+      case "awaiting_reddit_post":
+        return "bg-blue-500/20 text-blue-400";
+      case "posting_reddit":
         return "bg-blue-500/20 text-blue-400";
       case "posted":
         return "bg-green-500/20 text-green-400";
@@ -186,7 +253,35 @@ export default function DashboardContent() {
     }
   };
 
-  const queuedPosts = posts.filter((p) => p.status === "queued" || p.status === "posting");
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "queued":
+        return "Queued";
+      case "awaiting_redgifs_url":
+        return "Upload to RedGifs";
+      case "uploading_redgifs":
+        return "Uploading to RedGifs...";
+      case "awaiting_reddit_post":
+        return "Post to Reddit";
+      case "posting_reddit":
+        return "Posting to Reddit...";
+      case "posted":
+        return "Posted";
+      case "failed":
+        return "Failed";
+      default:
+        return status;
+    }
+  };
+
+  const queuedPosts = posts.filter(
+    (p) => 
+      p.status === "queued" || 
+      p.status === "awaiting_redgifs_url" ||
+      p.status === "uploading_redgifs" ||
+      p.status === "awaiting_reddit_post" ||
+      p.status === "posting_reddit"
+  );
   const postedPosts = posts.filter((p) => p.status === "posted");
   const failedPosts = posts.filter((p) => p.status === "failed");
 
@@ -203,6 +298,20 @@ export default function DashboardContent() {
               </p>
             </div>
             <div className="flex items-center gap-6">
+              {/* Mode Indicator Badge */}
+              {publishingMode && (
+                <div className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 ${
+                  publishingMode.redgifs === 'auto' && publishingMode.reddit === 'auto'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-blue-500/20 text-blue-400'
+                }`}>
+                  {publishingMode.redgifs === 'auto' && publishingMode.reddit === 'auto' ? (
+                    <>⚡ Auto Mode</>
+                  ) : (
+                    <>✋ Manual Mode</>
+                  )}
+                </div>
+              )}
               {/* Tab Navigation */}
               <div className="flex bg-white/5 rounded-lg p-1">
                 <button
@@ -422,7 +531,7 @@ export default function DashboardContent() {
                           <div className="flex items-center gap-2">
                             {getStatusIcon(post.status)}
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(post.status)}`}>
-                              {post.status}
+                              {getStatusLabel(post.status)}
                             </span>
                             <span className="text-white/40 text-xs">
                               #{post.id}
@@ -477,13 +586,178 @@ export default function DashboardContent() {
                           </div>
                         )}
 
-                        {/* Status Messages */}
-                        {post.status === "posting" && (
+                        {/* Status Messages & Manual Wizards */}
+                        
+                        {/* Manual Mode: RedGifs Upload Step */}
+                        {post.status === "awaiting_redgifs_url" && asset && (
+                          <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="text-purple-300 text-sm font-bold uppercase tracking-wider">
+                                STEP 1: Upload to RedGifs
+                              </label>
+                            </div>
+                            <p className="text-white/80 text-sm">
+                              Upload this video to RedGifs, then paste the URL below.
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open("https://www.redgifs.com/upload", "_blank", "noopener,noreferrer")}
+                              className="h-8 text-xs bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Open RedGifs Upload
+                            </Button>
+                            <div className="space-y-2">
+                              <Input
+                                placeholder="Paste RedGifs URL here (e.g., https://redgifs.com/watch/...)"
+                                value={redgifsUrls[post.id] || ""}
+                                onChange={(e) => setRedgifsUrls({ ...redgifsUrls, [post.id]: e.target.value })}
+                                className="bg-black/40 border-purple-500/30 text-white placeholder:text-white/40"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveRedGifsUrl(post.id)}
+                                disabled={saveRedGifsUrl.isPending}
+                                className="w-full bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30"
+                              >
+                                {saveRedGifsUrl.isPending ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  "Save RedGifs URL"
+                                )}
+                              </Button>
+                            </div>
+                            <p className="text-blue-300 text-xs flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              ⏳ Waiting for RedGifs URL
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Manual Mode: Reddit Posting Step */}
+                        {post.status === "awaiting_reddit_post" && asset && (
+                          <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="text-orange-300 text-sm font-bold uppercase tracking-wider">
+                                STEP 2: Post to Reddit
+                              </label>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white/60 text-xs">Title:</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => copyToClipboard(post.postTitle || "", `manual-title-${post.id}`)}
+                                  className="h-6 text-xs"
+                                >
+                                  {copiedId === `manual-title-${post.id}` ? (
+                                    <><Check className="w-3 h-3 mr-1" /> Copied</>
+                                  ) : (
+                                    <><Copy className="w-3 h-3 mr-1" /> Copy</>
+                                  )}
+                                </Button>
+                              </div>
+                              <code className="block px-3 py-2 rounded bg-black/40 text-white text-sm font-mono border border-white/10">
+                                {post.postTitle}
+                              </code>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white/60 text-xs">RedGifs URL:</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => copyToClipboard(asset.redgifsUrl || "", `manual-url-${post.id}`)}
+                                  className="h-6 text-xs"
+                                >
+                                  {copiedId === `manual-url-${post.id}` ? (
+                                    <><Check className="w-3 h-3 mr-1" /> Copied</>
+                                  ) : (
+                                    <><Copy className="w-3 h-3 mr-1" /> Copy</>
+                                  )}
+                                </Button>
+                              </div>
+                              <code className="block px-3 py-2 rounded bg-black/40 text-white/60 text-xs font-mono border border-white/10 truncate">
+                                {asset.redgifsUrl}
+                              </code>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white/60 text-xs">Subreddit: r/{post.targetSubreddit}</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(`https://www.reddit.com/r/${post.targetSubreddit}/submit`, "_blank", "noopener,noreferrer")}
+                                  className="h-6 text-xs bg-orange-500/20 border-orange-500/30 text-orange-300"
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  Open Subreddit
+                                </Button>
+                              </div>
+                            </div>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => copyAllForReddit(post.postTitle || "", asset.redgifsUrl || "", `manual-all-${post.id}`)}
+                              className="w-full h-8 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10"
+                            >
+                              {copiedId === `manual-all-${post.id}` ? (
+                                <><Check className="w-3 h-3 mr-2" /> Copied All</>
+                              ) : (
+                                <><Copy className="w-3 h-3 mr-2" /> Copy All (Title + URL)</>
+                              )}
+                            </Button>
+
+                            <div className="space-y-2 pt-2">
+                              <label className="text-white/60 text-xs">After posting, paste Reddit permalink:</label>
+                              <Input
+                                placeholder="Paste Reddit post URL here (e.g., https://reddit.com/r/...)"
+                                value={redditUrls[post.id] || ""}
+                                onChange={(e) => setRedditUrls({ ...redditUrls, [post.id]: e.target.value })}
+                                className="bg-black/40 border-orange-500/30 text-white placeholder:text-white/40"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveRedditPermalink(post.id)}
+                                disabled={saveRedditPermalink.isPending}
+                                className="w-full bg-orange-500/20 border-orange-500/30 text-orange-300 hover:bg-orange-500/30"
+                              >
+                                {saveRedditPermalink.isPending ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  "Save Reddit Permalink"
+                                )}
+                              </Button>
+                            </div>
+                            
+                            <p className="text-blue-300 text-xs flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              ⏳ Waiting for Reddit permalink
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Auto Mode: Processing Status */}
+                        {(post.status === "uploading_redgifs" || post.status === "posting_reddit") && (
                           <div className="p-3 rounded bg-blue-500/10 border border-blue-500/20">
                             <div className="flex items-center gap-2">
                               <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
                               <p className="text-blue-300 text-sm">
-                                Publishing in progress... Uploading to RedGifs and posting to Reddit
+                                {post.status === "uploading_redgifs" 
+                                  ? "Uploading to RedGifs..." 
+                                  : "Posting to Reddit..."}
                               </p>
                             </div>
                           </div>
