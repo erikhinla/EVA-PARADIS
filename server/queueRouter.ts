@@ -5,6 +5,7 @@ import { getDb } from "./db";
 import { posts, assets, Post, InsertPost } from "../drizzle/schema";
 import { uploadToRedGifs } from "./redgifs";
 import { postToReddit } from "./reddit";
+import { getPublishingMode } from "./mode";
 
 /**
  * Concept tag to Reddit title mapping
@@ -150,28 +151,53 @@ export const queueRouter = router({
         input.targetSubreddit
       );
 
-      // Create post record with queued status
+      // Check publishing mode
+      const mode = getPublishingMode();
+
+      // Determine initial status based on mode
+      let initialStatus: "queued" | "awaiting_redgifs_url" = "queued";
+      if (mode.redgifs === 'manual') {
+        initialStatus = "awaiting_redgifs_url";
+      }
+
+      // Create post record with appropriate status
       const newPost: InsertPost = {
         assetId: input.assetId,
         platform: "reddit",
         targetSubreddit,
         postTitle,
-        status: "queued",
+        status: initialStatus,
       };
 
       const insertResult = await db.insert(posts).values(newPost);
       const postId = insertResult[0].insertId;
 
-      // Start async processing
-      processPost(postId, asset, postTitle, targetSubreddit).catch((error) => {
-        console.error(`[Queue] Failed to process post ${postId}:`, error);
-      });
+      // If auto mode, start async processing
+      if (mode.redgifs === 'auto' && mode.reddit === 'auto') {
+        processPost(postId, asset, postTitle, targetSubreddit).catch((error) => {
+          console.error(`[Queue] Failed to process post ${postId}:`, error);
+        });
 
+        return {
+          postId,
+          status: "queued",
+          postTitle,
+          targetSubreddit,
+          mode: "auto" as const,
+        };
+      }
+
+      // Manual mode - return instructions
       return {
         postId,
-        status: "queued",
+        status: initialStatus,
         postTitle,
         targetSubreddit,
+        mode: "manual" as const,
+        step: mode.redgifs === 'manual' ? 'redgifs' : 'reddit',
+        message: mode.redgifs === 'manual' 
+          ? 'Upload video to RedGifs and paste URL below'
+          : 'Post to Reddit and paste permalink below',
       };
     }),
 
@@ -194,10 +220,126 @@ export const queueRouter = router({
 
       return result;
     }),
+
+  /**
+   * Get current publishing mode (auto or manual)
+   */
+  getPublishingMode: publicProcedure.query(() => {
+    return getPublishingMode();
+  }),
+
+  /**
+   * Save RedGifs URL (manual mode)
+   * Eva pastes the RedGifs URL after manual upload
+   */
+  saveRedGifsUrl: publicProcedure
+    .input(
+      z.object({
+        postId: z.number(),
+        redgifsUrl: z.string().url(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      // Validate URL contains redgifs.com
+      if (!input.redgifsUrl.includes("redgifs.com")) {
+        throw new Error("Invalid RedGifs URL - must contain redgifs.com");
+      }
+
+      // Get the post
+      const postResult = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.id, input.postId))
+        .limit(1);
+
+      if (postResult.length === 0) {
+        throw new Error("Post not found");
+      }
+
+      const post = postResult[0];
+
+      // Get the asset to update its redgifsUrl
+      const assetResult = await db
+        .select()
+        .from(assets)
+        .where(eq(assets.id, post.assetId))
+        .limit(1);
+
+      if (assetResult.length === 0) {
+        throw new Error("Asset not found");
+      }
+
+      const asset = assetResult[0];
+
+      // Update asset with RedGifs URL
+      await db
+        .update(assets)
+        .set({ redgifsUrl: input.redgifsUrl })
+        .where(eq(assets.id, asset.id));
+
+      // Update post status to awaiting Reddit post
+      await db
+        .update(posts)
+        .set({ status: "awaiting_reddit_post" })
+        .where(eq(posts.id, input.postId));
+
+      // Return the post package for manual Reddit posting
+      return {
+        success: true,
+        postPackage: {
+          title: post.postTitle || "",
+          url: input.redgifsUrl,
+          subreddit: post.targetSubreddit || "",
+          nsfw: true,
+        },
+      };
+    }),
+
+  /**
+   * Save Reddit permalink (manual mode)
+   * Eva pastes the Reddit permalink after manual posting
+   */
+  saveRedditPermalink: publicProcedure
+    .input(
+      z.object({
+        postId: z.number(),
+        redditUrl: z.string().url(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      // Validate URL contains reddit.com
+      if (!input.redditUrl.includes("reddit.com")) {
+        throw new Error("Invalid Reddit URL - must contain reddit.com");
+      }
+
+      // Update post with Reddit URL and mark as posted
+      await db
+        .update(posts)
+        .set({
+          postUrl: input.redditUrl,
+          status: "posted",
+          postedAt: new Date(),
+        })
+        .where(eq(posts.id, input.postId));
+
+      return {
+        success: true,
+      };
+    }),
 });
 
 /**
- * Process a post asynchronously
+ * Process a post asynchronously (auto mode only)
  * Uploads to RedGifs and posts to Reddit
  */
 async function processPost(
@@ -212,10 +354,10 @@ async function processPost(
   }
 
   try {
-    // Update status to posting
+    // Update status to uploading_redgifs
     await db
       .update(posts)
-      .set({ status: "posting" })
+      .set({ status: "uploading_redgifs" })
       .where(eq(posts.id, postId));
 
     // Step 1: Upload to RedGifs if not already uploaded
@@ -236,6 +378,12 @@ async function processPost(
 
       console.log(`[Queue] RedGifs upload complete: ${redgifsUrl}`);
     }
+
+    // Update status to posting_reddit
+    await db
+      .update(posts)
+      .set({ status: "posting_reddit" })
+      .where(eq(posts.id, postId));
 
     // Step 2: Post to Reddit
     console.log(`[Queue] Posting to r/${targetSubreddit}...`);

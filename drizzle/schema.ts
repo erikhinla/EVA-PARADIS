@@ -55,7 +55,15 @@ export const posts = mysqlTable("posts", {
   targetSubreddit: varchar("targetSubreddit", { length: 255 }), // for Reddit
   postTitle: text("postTitle"),
   postUrl: text("postUrl"), // URL to posted content
-  status: mysqlEnum("status", ["queued", "posting", "posted", "failed"]).default("queued").notNull(),
+  status: mysqlEnum("status", [
+    "queued",
+    "awaiting_redgifs_url",
+    "uploading_redgifs", 
+    "awaiting_reddit_post",
+    "posting_reddit",
+    "posted",
+    "failed"
+  ]).default("queued").notNull(),
   scheduledFor: timestamp("scheduledFor"), // when to post
   postedAt: timestamp("postedAt"), // actual post time
   errorMessage: text("errorMessage"),
