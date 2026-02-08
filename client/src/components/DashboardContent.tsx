@@ -1,87 +1,123 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { 
   Upload, FileVideo, X, Download, ExternalLink, Copy, Check,
-  AlertCircle, Clock, CheckCircle2, XCircle 
+  AlertCircle, Clock, CheckCircle2, XCircle, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 import ConversionAnalytics from "./ConversionAnalytics";
 
-interface Asset {
-  id: string;
-  file: File;
-  conceptName: string;
-  status: "pending" | "processing" | "ready" | "failed";
-  progress: number;
-  thumbnail: string;
-  fileUrl: string; // S3 URL in production
-}
+// Concept tags for the dropdown
+const CONCEPT_TAGS = [
+  { value: "DOMINANCE_WORSHIP", label: "Dominance Worship" },
+  { value: "HARDCORE_GROUP", label: "Hardcore Group" },
+  { value: "ANATOMY_SOLO", label: "Anatomy Solo" },
+];
 
-interface PostPackage {
-  id: string;
-  assetId: string;
-  postTitle: string;
-  targetSubreddit: string;
-  redgifsUrl: string;
-  postUrl: string;
-  status: "queued" | "posted" | "failed" | "needs-retry";
-  createdAt: Date;
-  postedAt: Date | null;
-  errorNotes: string;
-}
+// Target subreddits organized by concept
+const SUBREDDIT_OPTIONS = [
+  { value: "TransGoneWild", label: "r/TransGoneWild" },
+  { value: "Tgirls", label: "r/Tgirls" },
+  { value: "TransPorn", label: "r/TransPorn" },
+  { value: "GroupSex", label: "r/GroupSex" },
+];
 
 export default function DashboardContent() {
   const [activeTab, setActiveTab] = useState<"posting" | "analytics">("posting");
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [postPackages, setPostPackages] = useState<PostPackage[]>([]);
   const [conceptName, setConceptName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [subredditSelections, setSubredditSelections] = useState<Record<number, string>>({});
 
-  const uploadRawAsset = (file: File) => {
+  // tRPC queries and mutations
+  const { data: assets = [], refetch: refetchAssets } = trpc.assets.list.useQuery(undefined, {
+    refetchInterval: 5000, // Poll every 5 seconds
+  });
+  
+  const { data: posts = [], refetch: refetchPosts } = trpc.queue.list.useQuery(undefined, {
+    refetchInterval: 3000, // Poll every 3 seconds for post status updates
+  });
+
+  const uploadAsset = trpc.assets.upload.useMutation({
+    onSuccess: () => {
+      refetchAssets();
+      toast.success("Asset uploaded successfully");
+    },
+    onError: (error) => {
+      toast.error(`Upload failed: ${error.message}`);
+    },
+  });
+
+  const publishToReddit = trpc.queue.publish.useMutation({
+    onSuccess: () => {
+      refetchPosts();
+      toast.success("Publishing started - check status updates");
+    },
+    onError: (error) => {
+      toast.error(`Failed to start publishing: ${error.message}`);
+    },
+  });
+
+  const deleteAsset = trpc.assets.delete.useMutation({
+    onSuccess: () => {
+      refetchAssets();
+      toast.success("Asset deleted");
+    },
+    onError: (error) => {
+      toast.error(`Delete failed: ${error.message}`);
+    },
+  });
+
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data:mime/type;base64, prefix
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const uploadRawAsset = async (file: File) => {
     if (!conceptName.trim()) {
       toast.error("Enter concept name before uploading");
       return;
     }
 
-    const thumbnailUrl = URL.createObjectURL(file);
-    const newAsset: Asset = {
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      conceptName: conceptName.trim(),
-      status: "processing",
-      progress: 0,
-      thumbnail: thumbnailUrl,
-      fileUrl: thumbnailUrl, // In production, this would be S3 URL
-    };
+    const fileId = `${file.name}-${Date.now()}`;
+    setUploadingFiles((prev) => new Set(prev).add(fileId));
 
-    setAssets((prev) => [newAsset, ...prev]);
-    setConceptName("");
+    try {
+      const base64Data = await fileToBase64(file);
+      
+      await uploadAsset.mutateAsync({
+        fileName: file.name,
+        fileType: file.type,
+        fileData: base64Data,
+        conceptName: conceptName.trim(),
+      });
 
-    // Simulate processing
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setAssets((prev) =>
-        prev.map((asset) =>
-          asset.id === newAsset.id ? { ...asset, progress } : asset
-        )
-      );
-
-      if (progress >= 100) {
-        clearInterval(interval);
-        setAssets((prev) =>
-          prev.map((asset) =>
-            asset.id === newAsset.id ? { ...asset, status: "ready" } : asset
-          )
-        );
-        toast.success(`${file.name} ready`);
-      }
-    }, 300);
+      setConceptName("");
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setUploadingFiles((prev) => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -103,60 +139,14 @@ export default function DashboardContent() {
     files.forEach((file) => uploadRawAsset(file));
   };
 
-  const removeAsset = (id: string) => {
-    setAssets((prev) => prev.filter((asset) => asset.id !== id));
-  };
-
-  const downloadAsset = (asset: Asset) => {
-    const url = URL.createObjectURL(asset.file);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = asset.file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(`Downloaded ${asset.file.name}`);
-  };
-
-  const generatePostPackage = (asset: Asset) => {
-    const subreddits = {
-      general: ["gonewild", "RealGirls", "nsfw", "BustyPetite"],
-      trans: ["traps", "GoneWildTrans", "transporn", "Tgirls"],
-      lingerie: ["lingerie", "UnderwearGW"],
-      videos: ["NSFW_GIF", "porn_gifs"],
-      creators: ["OnlyFansPromotions", "OnlyFans101"],
-    };
-
-    // Simple targeting logic based on concept name
-    let targetSub = "gonewild"; // default
-    const concept = asset.conceptName.toLowerCase();
-    
-    if (concept.includes("lingerie") || concept.includes("underwear")) {
-      targetSub = subreddits.lingerie[0];
-    } else if (concept.includes("video") || asset.file.type.startsWith("video/")) {
-      targetSub = subreddits.videos[0];
-    } else if (concept.includes("trans") || concept.includes("tgirl")) {
-      targetSub = subreddits.trans[0];
+  const removeAsset = (id: number) => {
+    if (confirm("Delete this asset?")) {
+      deleteAsset.mutate({ id });
     }
+  };
 
-    const postTitle = `${asset.conceptName} [OC]`;
-
-    const newPackage: PostPackage = {
-      id: Math.random().toString(36).substr(2, 9),
-      assetId: asset.id,
-      postTitle,
-      targetSubreddit: targetSub,
-      redgifsUrl: "",
-      postUrl: "",
-      status: "queued",
-      createdAt: new Date(),
-      postedAt: null,
-      errorNotes: "",
-    };
-
-    setPostPackages((prev) => [newPackage, ...prev]);
-    toast.success("Post package created");
+  const queueForDistribution = (assetId: number, targetSubreddit?: string) => {
+    publishToReddit.mutate({ assetId, targetSubreddit });
   };
 
   const copyToClipboard = (text: string, id: string) => {
@@ -166,63 +156,39 @@ export default function DashboardContent() {
     toast.success("Copied");
   };
 
-  const updatePackage = (id: string, updates: Partial<PostPackage>) => {
-    setPostPackages((prev) =>
-      prev.map((pkg) => (pkg.id === id ? { ...pkg, ...updates } : pkg))
-    );
-  };
-
-  const markAsPosted = (id: string) => {
-    const pkg = postPackages.find((p) => p.id === id);
-    if (!pkg?.redgifsUrl || !pkg?.postUrl) {
-      toast.error("Paste RedGifs URL and Reddit URL first");
-      return;
-    }
-    updatePackage(id, { status: "posted", postedAt: new Date() });
-    toast.success("Marked as posted");
-  };
-
-  const markAsFailed = (id: string, errorNotes: string) => {
-    updatePackage(id, { status: "failed", errorNotes });
-    toast.error("Marked as failed");
-  };
-
-  const markAsRetry = (id: string) => {
-    updatePackage(id, { status: "needs-retry", errorNotes: "" });
-    toast.info("Moved to retry queue");
-  };
-
-  const getStatusIcon = (status: PostPackage["status"]) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "queued":
         return <Clock className="w-4 h-4 text-amber-400" />;
+      case "posting":
+        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
       case "posted":
         return <CheckCircle2 className="w-4 h-4 text-green-400" />;
       case "failed":
         return <XCircle className="w-4 h-4 text-red-400" />;
-      case "needs-retry":
-        return <AlertCircle className="w-4 h-4 text-orange-400" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
-  const getStatusColor = (status: PostPackage["status"]) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "queued":
         return "bg-amber-500/20 text-amber-400";
+      case "posting":
+        return "bg-blue-500/20 text-blue-400";
       case "posted":
         return "bg-green-500/20 text-green-400";
       case "failed":
         return "bg-red-500/20 text-red-400";
-      case "needs-retry":
-        return "bg-orange-500/20 text-orange-400";
+      default:
+        return "bg-gray-500/20 text-gray-400";
     }
   };
 
-  const queuedPackages = postPackages.filter(
-    (p) => p.status === "queued" || p.status === "needs-retry"
-  );
-  const postedPackages = postPackages.filter((p) => p.status === "posted");
-  const failedPackages = postPackages.filter((p) => p.status === "failed");
+  const queuedPosts = posts.filter((p) => p.status === "queued" || p.status === "posting");
+  const postedPosts = posts.filter((p) => p.status === "posted");
+  const failedPosts = posts.filter((p) => p.status === "failed");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -264,13 +230,13 @@ export default function DashboardContent() {
               {activeTab === "posting" && (
                 <div className="flex gap-6 text-right text-xs text-white/60">
                   <div>
-                    <span className="text-amber-400 font-bold">{queuedPackages.length}</span> Queued
+                    <span className="text-amber-400 font-bold">{queuedPosts.length}</span> Queued
                   </div>
                   <div>
-                    <span className="text-green-400 font-bold">{postedPackages.length}</span> Posted
+                    <span className="text-green-400 font-bold">{postedPosts.length}</span> Posted
                   </div>
                   <div>
-                    <span className="text-red-400 font-bold">{failedPackages.length}</span> Failed
+                    <span className="text-red-400 font-bold">{failedPosts.length}</span> Failed
                   </div>
                 </div>
               )}
@@ -354,10 +320,10 @@ export default function DashboardContent() {
                       className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10"
                     >
                       <div className="flex-shrink-0 relative w-20 h-20 rounded-lg overflow-hidden bg-black/40">
-                        {asset.file.type.startsWith("video/") ? (
+                        {asset.fileType.startsWith("video/") ? (
                           <>
                             <video
-                              src={asset.thumbnail}
+                              src={asset.fileUrl}
                               className="w-full h-full object-cover"
                               muted
                             />
@@ -367,8 +333,8 @@ export default function DashboardContent() {
                           </>
                         ) : (
                           <img
-                            src={asset.thumbnail}
-                            alt={asset.file.name}
+                            src={asset.fileUrl}
+                            alt={asset.fileName}
                             className="w-full h-full object-cover"
                           />
                         )}
@@ -376,7 +342,7 @@ export default function DashboardContent() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-white font-medium truncate">{asset.file.name}</p>
+                          <p className="text-white font-medium truncate">{asset.fileName}</p>
                           <button
                             onClick={() => removeAsset(asset.id)}
                             className="text-white/40 hover:text-white/80"
@@ -388,34 +354,41 @@ export default function DashboardContent() {
                           {asset.conceptName}
                         </p>
 
-                        {asset.status === "processing" && (
-                          <div className="space-y-1">
-                            <Progress value={asset.progress} className="h-2" />
-                            <p className="text-white/40 text-xs">{asset.progress}%</p>
-                          </div>
-                        )}
-
                         {asset.status === "ready" && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
                               Ready
                             </span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadAsset(asset)}
-                              className="h-7 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10"
+                            <Select
+                              value={subredditSelections[asset.id] || ""}
+                              onValueChange={(value) => 
+                                setSubredditSelections(prev => ({ ...prev, [asset.id]: value }))
+                              }
                             >
-                              <Download className="w-3 h-3 mr-1" />
-                              Download
-                            </Button>
+                              <SelectTrigger className="h-7 w-[160px] text-xs bg-white/5 border-white/10 text-white">
+                                <SelectValue placeholder="Select subreddit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SUBREDDIT_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => generatePostPackage(asset)}
+                              onClick={() => queueForDistribution(asset.id, subredditSelections[asset.id])}
+                              disabled={publishToReddit.isLoading}
                               className="h-7 text-xs bg-amber-500/20 border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
                             >
-                              Create Post Package
+                              {publishToReddit.isLoading ? (
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              ) : (
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                              )}
+                              Queue for Distribution
                             </Button>
                           </div>
                         )}
@@ -427,36 +400,36 @@ export default function DashboardContent() {
             </Card>
           )}
 
-          {/* Queued Post Packages */}
-          {queuedPackages.length > 0 && (
+          {/* Queued/Publishing Posts */}
+          {queuedPosts.length > 0 && (
             <Card className="p-6 bg-black/40 backdrop-blur-xl border-amber-500/20">
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">Queued Posts</h2>
-                  <p className="text-white/60 text-sm">{queuedPackages.length} ready to execute</p>
+                  <h2 className="text-xl font-bold text-white mb-1">Active Posts</h2>
+                  <p className="text-white/60 text-sm">{queuedPosts.length} in progress</p>
                 </div>
 
                 <div className="space-y-4">
-                  {queuedPackages.map((pkg) => {
-                    const asset = assets.find((a) => a.id === pkg.assetId);
+                  {queuedPosts.map((post) => {
+                    const asset = assets.find((a) => a.id === post.assetId);
                     return (
                       <div
-                        key={pkg.id}
+                        key={post.id}
                         className="p-6 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 space-y-4"
                       >
                         {/* Package Header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {getStatusIcon(pkg.status)}
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pkg.status)}`}>
-                              {pkg.status}
+                            {getStatusIcon(post.status)}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(post.status)}`}>
+                              {post.status}
                             </span>
                             <span className="text-white/40 text-xs">
-                              #{pkg.id}
+                              #{post.id}
                             </span>
                           </div>
                           <span className="text-white/40 text-xs">
-                            {pkg.createdAt.toLocaleDateString()}
+                            {new Date(post.createdAt).toLocaleString()}
                           </span>
                         </div>
 
@@ -465,15 +438,15 @@ export default function DashboardContent() {
                           <label className="text-white/60 text-xs uppercase tracking-wider">Title</label>
                           <div className="flex items-center gap-2">
                             <code className="flex-1 px-3 py-2 rounded bg-black/40 text-white text-sm font-mono border border-white/10">
-                              {pkg.postTitle}
+                              {post.postTitle}
                             </code>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => copyToClipboard(pkg.postTitle, `title-${pkg.id}`)}
+                              onClick={() => copyToClipboard(post.postTitle || "", `title-${post.id}`)}
                               className="h-8 w-8 p-0"
                             >
-                              {copiedId === `title-${pkg.id}` ? (
+                              {copiedId === `title-${post.id}` ? (
                                 <Check className="w-4 h-4 text-green-400" />
                               ) : (
                                 <Copy className="w-4 h-4" />
@@ -487,108 +460,34 @@ export default function DashboardContent() {
                           <label className="text-white/60 text-xs uppercase tracking-wider">Subreddit</label>
                           <div className="flex items-center gap-2">
                             <code className="px-3 py-2 rounded bg-black/40 text-amber-400 text-sm font-mono border border-white/10">
-                              r/{pkg.targetSubreddit}
+                              r/{post.targetSubreddit}
                             </code>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                window.open(`https://reddit.com/r/${pkg.targetSubreddit}/submit`, "_blank")
-                              }
-                              className="h-8 text-xs"
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              Open
-                            </Button>
                           </div>
                         </div>
 
-                        {/* Content File */}
-                        <div className="space-y-2">
-                          <label className="text-white/60 text-xs uppercase tracking-wider">Content File</label>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 px-3 py-2 rounded bg-black/40 text-white/60 text-xs font-mono border border-white/10 truncate">
-                              {asset?.fileUrl || "N/A"}
-                            </code>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(asset?.fileUrl || "", `file-${pkg.id}`)}
-                              className="h-8 w-8 p-0"
-                            >
-                              {copiedId === `file-${pkg.id}` ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
+                        {/* Asset Info */}
+                        {asset && (
+                          <div className="space-y-2">
+                            <label className="text-white/60 text-xs uppercase tracking-wider">Asset</label>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 px-3 py-2 rounded bg-black/40 text-white/60 text-xs font-mono border border-white/10 truncate">
+                                {asset.fileName}
+                              </code>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
-                        {/* RedGifs Instructions */}
-                        <div className="space-y-2 p-4 rounded bg-purple-500/10 border border-purple-500/20">
-                          <label className="text-purple-300 text-xs uppercase tracking-wider font-bold">
-                            RedGifs Upload
-                          </label>
-                          <ol className="text-white/80 text-sm space-y-1 list-decimal list-inside">
-                            <li>Go to redgifs.com/upload</li>
-                            <li>Upload file from URL above</li>
-                            <li>Set title: {pkg.postTitle}</li>
-                            <li>Copy RedGifs URL</li>
-                            <li>Paste below</li>
-                          </ol>
-                          <Input
-                            placeholder="Paste RedGifs URL here"
-                            value={pkg.redgifsUrl}
-                            onChange={(e) => updatePackage(pkg.id, { redgifsUrl: e.target.value })}
-                            className="bg-black/40 border-purple-500/30 text-white placeholder:text-white/40"
-                          />
-                        </div>
-
-                        {/* Reddit Posting */}
-                        <div className="space-y-2 p-4 rounded bg-orange-500/10 border border-orange-500/20">
-                          <label className="text-orange-300 text-xs uppercase tracking-wider font-bold">
-                            Reddit Post
-                          </label>
-                          <ol className="text-white/80 text-sm space-y-1 list-decimal list-inside">
-                            <li>Go to reddit.com/r/{pkg.targetSubreddit}/submit</li>
-                            <li>Choose "Link" post</li>
-                            <li>Title: {pkg.postTitle}</li>
-                            <li>URL: Paste RedGifs URL</li>
-                            <li>Mark NSFW: YES</li>
-                            <li>Submit</li>
-                            <li>Copy Reddit post URL</li>
-                            <li>Paste below</li>
-                          </ol>
-                          <Input
-                            placeholder="Paste Reddit post URL here"
-                            value={pkg.postUrl}
-                            onChange={(e) => updatePackage(pkg.id, { postUrl: e.target.value })}
-                            className="bg-black/40 border-orange-500/30 text-white placeholder:text-white/40"
-                          />
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 pt-2">
-                          <Button
-                            onClick={() => markAsPosted(pkg.id)}
-                            className="bg-green-500/20 border-green-500/30 text-green-400 hover:bg-green-500/30"
-                          >
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Mark Posted
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              const notes = prompt("Error reason:");
-                              if (notes) markAsFailed(pkg.id, notes);
-                            }}
-                            className="bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            Mark Failed
-                          </Button>
-                        </div>
+                        {/* Status Messages */}
+                        {post.status === "posting" && (
+                          <div className="p-3 rounded bg-blue-500/10 border border-blue-500/20">
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                              <p className="text-blue-300 text-sm">
+                                Publishing in progress... Uploading to RedGifs and posting to Reddit
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -598,37 +497,39 @@ export default function DashboardContent() {
           )}
 
           {/* Posted Packages */}
-          {postedPackages.length > 0 && (
+          {postedPosts.length > 0 && (
             <Card className="p-6 bg-black/40 backdrop-blur-xl border-green-500/20">
               <div className="space-y-4">
                 <div>
                   <h2 className="text-xl font-bold text-white mb-1">Posted</h2>
-                  <p className="text-white/60 text-sm">{postedPackages.length} successful</p>
+                  <p className="text-white/60 text-sm">{postedPosts.length} successful</p>
                 </div>
 
                 <div className="space-y-2">
-                  {postedPackages.map((pkg) => (
+                  {postedPosts.map((post) => (
                     <div
-                      key={pkg.id}
+                      key={post.id}
                       className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20"
                     >
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="w-4 h-4 text-green-400" />
                         <div>
-                          <p className="text-white text-sm font-medium">{pkg.postTitle}</p>
+                          <p className="text-white text-sm font-medium">{post.postTitle}</p>
                           <p className="text-white/60 text-xs">
-                            r/{pkg.targetSubreddit} • {pkg.postedAt?.toLocaleDateString()}
+                            r/{post.targetSubreddit} • {post.postedAt ? new Date(post.postedAt).toLocaleString() : "Recently"}
                           </p>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => window.open(pkg.postUrl, "_blank")}
-                        className="h-8 text-xs"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
+                      {post.postUrl && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(post.postUrl || "", "_blank")}
+                          className="h-8 text-xs"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -637,39 +538,39 @@ export default function DashboardContent() {
           )}
 
           {/* Failed Packages */}
-          {failedPackages.length > 0 && (
+          {failedPosts.length > 0 && (
             <Card className="p-6 bg-black/40 backdrop-blur-xl border-red-500/20">
               <div className="space-y-4">
                 <div>
                   <h2 className="text-xl font-bold text-white mb-1">Failed</h2>
-                  <p className="text-white/60 text-sm">{failedPackages.length} need attention</p>
+                  <p className="text-white/60 text-sm">{failedPosts.length} need attention</p>
                 </div>
 
                 <div className="space-y-2">
-                  {failedPackages.map((pkg) => (
+                  {failedPosts.map((post) => (
                     <div
-                      key={pkg.id}
+                      key={post.id}
                       className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <XCircle className="w-4 h-4 text-red-400" />
                           <div>
-                            <p className="text-white text-sm font-medium">{pkg.postTitle}</p>
-                            <p className="text-white/60 text-xs">r/{pkg.targetSubreddit}</p>
+                            <p className="text-white text-sm font-medium">{post.postTitle}</p>
+                            <p className="text-white/60 text-xs">r/{post.targetSubreddit}</p>
                           </div>
                         </div>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => markAsRetry(pkg.id)}
+                          onClick={() => queueForDistribution(post.assetId)}
                           className="h-8 text-xs bg-orange-500/20 border-orange-500/30 text-orange-400"
                         >
                           Retry
                         </Button>
                       </div>
-                      {pkg.errorNotes && (
-                        <p className="text-red-300 text-xs pl-7">{pkg.errorNotes}</p>
+                      {post.errorMessage && (
+                        <p className="text-red-300 text-xs pl-7">{post.errorMessage}</p>
                       )}
                     </div>
                   ))}
