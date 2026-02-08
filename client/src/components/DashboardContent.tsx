@@ -380,10 +380,10 @@ export default function DashboardContent() {
                               size="sm"
                               variant="outline"
                               onClick={() => queueForDistribution(asset.id, subredditSelections[asset.id])}
-                              disabled={publishToReddit.isLoading}
+                              disabled={publishToReddit.isPending}
                               className="h-7 text-xs bg-amber-500/20 border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
                             >
-                              {publishToReddit.isLoading ? (
+                              {publishToReddit.isPending ? (
                                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                               ) : (
                                 <ExternalLink className="w-3 h-3 mr-1" />
