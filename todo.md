@@ -15,3 +15,5 @@
 - [ ] Create full workflow diagram
 - [ ] Create 7-day sprint plan
 - [ ] Test with 20 users
+- [x] Replace "Premium Access" / "Enter Now" CTA with "Get to Know Me"
+- [x] Remove VIP code/trial pricing section from Home page

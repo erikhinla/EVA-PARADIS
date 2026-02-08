@@ -1,8 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Volume2, VolumeX, Copy, Check } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
@@ -10,9 +9,7 @@ export default function Home() {
   // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
-  const [vipCode, setVipCode] = useState("");
   const [isMuted, setIsMuted] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -38,25 +35,6 @@ export default function Home() {
     window.open(url, "_blank");
   };
 
-  const handleVipClick = () => {
-    if (vipCode.trim()) {
-      const url = `https://onlyfans.com/evaparadis/vip?code=${vipCode}&utm_source=landing&utm_medium=vip_portal&utm_campaign=eva_bridge`;
-      window.open(url, "_blank");
-    }
-  };
-
-  const handleCopyFromClipboard = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        setVipCode(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch (err) {
-      console.error('Failed to read clipboard:', err);
-    }
-  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -72,9 +50,9 @@ export default function Home() {
           poster="/images/hero-backup.png"
         >
           {isMobile ? (
-            <source src="/videos/hero-mobile.mp4" type="video/mp4" />
+            <source src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663127987916/MrfbVSaMpulRoujL.mp4" type="video/mp4" />
           ) : (
-            <source src="/videos/hero.mp4" type="video/mp4" />
+            <source src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663127987916/tdDLMDJYjjMstyWO.mp4" type="video/mp4" />
           )}
         </video>
         {/* Minimal gradient overlay */}
@@ -103,60 +81,17 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* Entry portals - ASYMMETRIC DESIGN with animations */}
-        <div className="w-full max-w-2xl flex flex-col md:flex-row justify-center items-end gap-3">
-          {/* Premium Portal - moved down to align with VIP bottom */}
-          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs animate-slide-up animation-delay-200">
-            <div className="relative p-4 flex flex-col items-center text-center space-y-3">
-              <h2 className="text-lg font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
-                Premium Access
-              </h2>
-
+        {/* Single CTA */}
+        <div className="w-full max-w-sm animate-slide-up animation-delay-200">
+          <Card className="group relative overflow-hidden metallic-card">
+            <div className="relative p-6 flex flex-col items-center text-center">
               <Button
                 onClick={handlePremiumClick}
                 size="default"
-                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-base py-4 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 metallic-button glow-button-amber"
+                className="w-full bg-gradient-to-br from-amber-600/80 to-amber-800/80 hover:from-amber-500/90 hover:to-amber-700/90 text-white font-bold text-lg py-5 rounded-md shadow-2xl border border-amber-400/30 transition-all duration-500 hover:scale-105 metallic-button glow-button-amber"
               >
-                Enter Now
+                Get to Know Me
               </Button>
-            </div>
-          </Card>
-
-          {/* VIP Portal - reduced height by 50% */}
-          <Card className="group relative overflow-hidden metallic-card w-full md:flex-1 md:max-w-xs vip-compact animate-slide-up animation-delay-400">
-            <div className="relative p-2 flex flex-col items-center text-center space-y-2">
-              <h2 className="text-sm font-bold text-white/90 drop-shadow-lg tracking-wide etched-text">
-                VIP Experience
-              </h2>
-
-              <div className="w-full space-y-1.5">
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="Unlock code"
-                    value={vipCode}
-                    onChange={(e) => setVipCode(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleVipClick()}
-                    className="bg-black/20 backdrop-blur-sm border-white/20 focus:border-amber-400/50 text-white placeholder:text-white/40 text-center text-xs py-2 pr-8 rounded-md shadow-lg transition-all duration-300 focus:scale-[1.02] metallic-input"
-                  />
-                  <button
-                    onClick={handleCopyFromClipboard}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors"
-                    aria-label="Paste from clipboard"
-                  >
-                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
-                
-                <Button
-                  onClick={handleVipClick}
-                  size="sm"
-                  disabled={!vipCode.trim()}
-                  className="w-full bg-gradient-to-br from-slate-600/80 to-slate-800/80 hover:from-slate-500/90 hover:to-slate-700/90 text-white font-bold text-xs py-2 rounded-md shadow-2xl border border-slate-400/30 transition-all duration-500 hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 metallic-button glow-button-slate"
-                >
-                  Unlock Access
-                </Button>
-              </div>
             </div>
           </Card>
         </div>
