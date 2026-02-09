@@ -8,77 +8,51 @@ const DESTINATIONS: Record<string, string> = {
 const SESSION_KEY = "bridge_redirect_ts";
 const RETURN_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 
-function getUtmParams(search: string): Record<string, string> {
-  const params = new URLSearchParams(search);
-  const utm: Record<string, string> = {};
-  params.forEach((value, key) => {
-    if (key.startsWith("utm_")) {
-      utm[key] = value;
-    }
-  });
-  return utm;
-}
-
-function buildDestUrl(base: string, utmParams: Record<string, string>): string {
-  const url = new URL(base);
-  Object.keys(utmParams).forEach((key) => {
-    url.searchParams.set(key, utmParams[key]);
-  });
-  return url.toString();
-}
-
 export default function Out() {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    const search = window.location.search;
-    const params = new URLSearchParams(search);
+    const params = new URLSearchParams(window.location.search);
     const dest = params.get("dest") || "onlyfans";
     const baseUrl = DESTINATIONS[dest] || DESTINATIONS.onlyfans;
-    const utmParams = getUtmParams(search);
 
-    // Check if this is a return visit (tab became visible again)
+    // Collect UTM params
+    const utm: Record<string, string> = {};
+    params.forEach((value, key) => {
+      if (key.startsWith("utm_")) utm[key] = value;
+    });
+
+    // If returning from a recent redirect, show capture
     const existingTs = sessionStorage.getItem(SESSION_KEY);
     if (existingTs) {
       const elapsed = Date.now() - parseInt(existingTs, 10);
       if (elapsed < RETURN_WINDOW_MS) {
-        // User came back — show capture page
         navigate("/capture");
         return;
       }
-      // Expired — clear and re-redirect
       sessionStorage.removeItem(SESSION_KEY);
     }
 
-    // Set timestamp before redirecting
+    // Set session state
     sessionStorage.setItem(SESSION_KEY, Date.now().toString());
-
-    // Store UTM params for the capture page
-    if (Object.keys(utmParams).length > 0) {
-      sessionStorage.setItem("bridge_utm", JSON.stringify(utmParams));
+    if (Object.keys(utm).length > 0) {
+      sessionStorage.setItem("bridge_utm", JSON.stringify(utm));
     }
 
-    // Listen for return (user switches back to this tab)
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        const ts = sessionStorage.getItem(SESSION_KEY);
-        if (ts && Date.now() - parseInt(ts, 10) < RETURN_WINDOW_MS) {
-          navigate("/capture");
-        }
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
+    // Build destination URL
+    const destUrl = new URL(baseUrl);
+    Object.keys(utm).forEach((key) => destUrl.searchParams.set(key, utm[key]));
 
-    // Redirect
-    const destUrl = buildDestUrl(baseUrl, utmParams);
-    window.location.href = destUrl;
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
+    // Open OF in new tab, show capture in current tab
+    const opened = window.open(destUrl.toString(), "_blank");
+    if (opened) {
+      navigate("/capture");
+    } else {
+      // Popup blocked — fall back to direct redirect
+      window.location.href = destUrl.toString();
+    }
   }, [navigate]);
 
-  // User should barely see this — it's a pass-through
   return (
     <div className="h-screen w-full bg-black flex items-center justify-center">
       <p className="text-white/30 text-sm tracking-widest" style={{ fontFamily: "'Cormorant Garamond', serif" }}>

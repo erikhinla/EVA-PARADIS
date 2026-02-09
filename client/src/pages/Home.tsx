@@ -1,9 +1,22 @@
-import { useRef, useEffect, useState, useMemo } from "react";
-import { Link } from "wouter";
+import { useRef, useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
+
+const OF_URL = "https://onlyfans.com/evaparadis";
+const SESSION_KEY = "bridge_redirect_ts";
+
+function getUtmParams(): Record<string, string> {
+  const params = new URLSearchParams(window.location.search);
+  const utm: Record<string, string> = {};
+  params.forEach((value, key) => {
+    if (key.startsWith("utm_")) utm[key] = value;
+  });
+  return utm;
+}
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -12,16 +25,27 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Forward any UTM params on the current URL to the /out route
-  const outHref = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    const out = new URLSearchParams();
-    out.set("dest", "onlyfans");
-    params.forEach((value, key) => {
-      if (key.startsWith("utm_")) out.set(key, value);
-    });
-    return `/out?${out.toString()}`;
-  }, []);
+  const handleCta = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const utm = getUtmParams();
+
+    // Store session state for capture page
+    sessionStorage.setItem(SESSION_KEY, Date.now().toString());
+    if (Object.keys(utm).length > 0) {
+      sessionStorage.setItem("bridge_utm", JSON.stringify(utm));
+    }
+
+    // Build destination URL with UTMs
+    const dest = new URL(OF_URL);
+    Object.keys(utm).forEach((key) => dest.searchParams.set(key, utm[key]));
+
+    // Open OF in new tab (direct click context = no popup blocker)
+    window.open(dest.toString(), "_blank");
+
+    // Show capture page in current tab
+    navigate("/capture");
+  };
 
   return (
     <div className="relative w-full overflow-hidden bg-black">
@@ -59,12 +83,12 @@ export default function Home() {
           </h1>
 
           <div className="mt-10 sm:mt-12">
-            <a
-              href={outHref}
+            <button
+              onClick={handleCta}
               className="eva-btn text-center"
             >
               Get To Know Me
-            </a>
+            </button>
           </div>
         </div>
 
@@ -117,6 +141,7 @@ export default function Home() {
           transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
           overflow: hidden;
+          cursor: pointer;
         }
 
         .eva-btn::before {

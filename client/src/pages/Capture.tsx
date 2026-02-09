@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 
 const SESSION_KEY = "bridge_redirect_ts";
-const RETURN_WINDOW_MS = 30 * 60 * 1000;
 
 export default function Capture() {
   const [, navigate] = useLocation();
@@ -10,13 +9,8 @@ export default function Capture() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Guard: only show if returning from redirect within the window
-  useEffect(() => {
-    const ts = sessionStorage.getItem(SESSION_KEY);
-    if (!ts || Date.now() - parseInt(ts, 10) >= RETURN_WINDOW_MS) {
-      navigate("/");
-    }
-  }, [navigate]);
+  // No strict guard — always show the capture page.
+  // If someone lands here directly it still works as a standalone email capture.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
