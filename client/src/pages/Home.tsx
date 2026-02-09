@@ -127,18 +127,9 @@ export default function Home() {
 
         .eva-btn:hover::before { opacity: 1; }
 
-        /* ── Video positioning ── */
+        /* ── Video positioning — frame her face ── */
         .hero-video {
-          object-position: center 30%;
-        }
-        @media (max-width: 640px) and (orientation: portrait) {
-          .hero-video { object-position: center 25%; }
-        }
-        @media (min-width: 641px) and (max-width: 1024px) {
-          .hero-video { object-position: center 28%; }
-        }
-        @media (min-width: 1920px) {
-          .hero-video { object-position: center 33%; }
+          object-position: center top;
         }
 
         /* ── Entrance animations ── */

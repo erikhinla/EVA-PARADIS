@@ -10,9 +10,7 @@ import {
   Globe,
   MessageCircle,
   Mail,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp
+  ChevronRight
 } from "lucide-react";
 
 const MOCK_LABEL = "Mock Data";
@@ -139,7 +137,6 @@ function DmCard({ platform, icon, iconColor, gradientFrom, gradientTo, metrics }
 }
 
 export default function ConversionAnalytics() {
-  const [emailExpanded, setEmailExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState<string | null>(null);
 
   // Mock data - will be replaced with Supabase queries when connected
@@ -157,16 +154,15 @@ export default function ConversionAnalytics() {
   };
 
   const trafficSources: TrafficSourceData[] = [
-    { source: "Reddit r/gonewild", visits: 3420, conversions: 34, rate: 4.2, color: "bg-orange-500" },
-    { source: "Reddit r/RealGirls", visits: 2180, conversions: 21, rate: 3.8, color: "bg-orange-400" },
-    { source: "Reddit r/amateur", visits: 1560, conversions: 14, rate: 3.5, color: "bg-orange-300" },
-    { source: "Reddit r/OnOff", visits: 980, conversions: 8, rate: 3.1, color: "bg-orange-200" },
+    { source: "Reddit r/TransGoneWild", visits: 3420, conversions: 34, rate: 4.2, color: "bg-orange-500" },
+    { source: "Reddit r/Tgirls", visits: 2180, conversions: 21, rate: 3.8, color: "bg-orange-400" },
+    { source: "Reddit r/TransPorn", visits: 1560, conversions: 14, rate: 3.5, color: "bg-orange-300" },
+    { source: "Reddit r/GroupSex", visits: 980, conversions: 8, rate: 3.1, color: "bg-orange-200" },
     { source: "RedGifs", visits: 2340, conversions: 18, rate: 2.7, color: "bg-red-500" },
     { source: "X (Twitter)", visits: 1780, conversions: 11, rate: 2.4, color: "bg-sky-500" },
     { source: "Instagram Bio", visits: 1890, conversions: 15, rate: 2.9, color: "bg-pink-500" },
     { source: "Instagram DM", visits: 1240, conversions: 12, rate: 3.1, color: "bg-pink-400" },
     { source: "TikTok", visits: 920, conversions: 4, rate: 1.4, color: "bg-cyan-400" },
-    { source: "TrafficJunky", visits: 1640, conversions: 9, rate: 1.9, color: "bg-yellow-500" },
     { source: "Direct", visits: 3227, conversions: 2, rate: 0.6, color: "bg-zinc-500" },
   ];
 
@@ -174,15 +170,14 @@ export default function ConversionAnalytics() {
     reddit: { sent: 156, responses: 42, rate: 26.9 },
     instagram: { sent: 78, responses: 25, rate: 32.1 },
     x: { sent: 64, responses: 12, rate: 18.8 },
-    onlyfans: { sent: 210, responses: 89, rate: 42.4 },
   };
 
   const summaryItems = [
     {
       key: "bestSource",
       label: "Best Performing Source",
-      value: "Reddit r/gonewild (4.2% conv.)",
-      detail: "r/gonewild consistently converts at 4.2%, outperforming all other sources. Consider increasing post frequency and testing new content formats in this subreddit.",
+      value: "Reddit r/TransGoneWild (4.2% conv.)",
+      detail: "r/TransGoneWild consistently converts at 4.2%, outperforming all other sources. Consider increasing post frequency and testing new content formats in this subreddit.",
     },
     {
       key: "bestScript",
@@ -270,7 +265,7 @@ export default function ConversionAnalytics() {
       </Card>
 
       {/* DM Performance */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <DmCard
           platform="Reddit DMs"
           icon={<MessageCircle className="w-5 h-5 text-orange-400" />}
@@ -295,65 +290,37 @@ export default function ConversionAnalytics() {
           gradientTo="to-sky-400"
           metrics={dmMetrics.x}
         />
-        <DmCard
-          platform="OnlyFans DMs"
-          icon={<MessageCircle className="w-5 h-5 text-cyan-400" />}
-          iconColor="text-cyan-400"
-          gradientFrom="from-cyan-500"
-          gradientTo="to-cyan-400"
-          metrics={dmMetrics.onlyfans}
-        />
       </div>
 
       {/* Email Capture */}
-      <Card
-        className="p-6 bg-black/40 backdrop-blur-xl border-white/10 cursor-pointer hover:bg-black/50 transition-colors"
-        onClick={() => {
-          setEmailExpanded(!emailExpanded);
-          console.log("[Email List] Toggled panel. Navigate to /dashboard/email for full view.");
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-amber-400" />
-            <h3 className="text-lg font-semibold text-white">Email List</h3>
-            <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL}</span>
+      <Card className="p-6 bg-black/40 backdrop-blur-xl border-white/10">
+        <div className="flex items-center gap-2 mb-4">
+          <Mail className="w-5 h-5 text-amber-400" />
+          <h3 className="text-lg font-semibold text-white">Email List</h3>
+          <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL}</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Total Signups</p>
+            <p className="text-2xl font-bold text-white">{metrics.emailSignups}</p>
+            <p className="text-green-400 text-xs font-medium mt-1">+23 this week</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-2xl font-bold text-white">{metrics.emailSignups}</p>
-              <p className="text-white/40 text-xs">Total signups</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-green-400">+23</p>
-              <p className="text-white/40 text-xs">This week</p>
-            </div>
-            {emailExpanded ? (
-              <ChevronUp className="w-5 h-5 text-white/40" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-white/40" />
-            )}
+          <div>
+            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Open Rate</p>
+            <p className="text-2xl font-bold text-white">38.2%</p>
+            <p className="text-white/30 text-xs mt-1">(mock)</p>
+          </div>
+          <div>
+            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Click Rate</p>
+            <p className="text-2xl font-bold text-white">12.4%</p>
+            <p className="text-white/30 text-xs mt-1">(mock)</p>
+          </div>
+          <div>
+            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Unsubscribe Rate</p>
+            <p className="text-2xl font-bold text-white">0.8%</p>
+            <p className="text-white/30 text-xs mt-1">(mock)</p>
           </div>
         </div>
-        {emailExpanded && (
-          <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-white/60">Open Rate</span>
-              <span className="text-white font-medium">38.2%</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-white/60">Click Rate</span>
-              <span className="text-white font-medium">12.4%</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-white/60">Unsubscribe Rate</span>
-              <span className="text-white font-medium">0.8%</span>
-            </div>
-            <p className="text-white/30 text-xs pt-2">Full email dashboard → /dashboard/email</p>
-          </div>
-        )}
       </Card>
 
       {/* Performance Summary */}
