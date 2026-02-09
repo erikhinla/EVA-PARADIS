@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { Link } from "wouter";
 
 export default function Home() {
@@ -10,6 +10,17 @@ export default function Home() {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Forward any UTM params on the current URL to the /out route
+  const outHref = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const out = new URLSearchParams();
+    out.set("dest", "onlyfans");
+    params.forEach((value, key) => {
+      if (key.startsWith("utm_")) out.set(key, value);
+    });
+    return `/out?${out.toString()}`;
   }, []);
 
   return (
@@ -49,9 +60,7 @@ export default function Home() {
 
           <div className="mt-10 sm:mt-12">
             <a
-              href="https://onlyfans.com/evaparadis"
-              target="_blank"
-              rel="noopener noreferrer"
+              href={outHref}
               className="eva-btn text-center"
             >
               Get To Know Me

@@ -5,6 +5,8 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Out from "./pages/Out";
+import Capture from "./pages/Capture";
 import Dashboard from "./pages/Dashboard";
 import VipPreview from "./pages/VipPreview";
 import TelegramOptIn from "./pages/TelegramOptIn";
@@ -15,6 +17,8 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/out"} component={Out} />
+      <Route path={"/capture"} component={Capture} />
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/vip"} component={VipPreview} />
       <Route path={"/telegram"} component={TelegramOptIn} />
