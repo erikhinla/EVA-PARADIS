@@ -1,12 +1,12 @@
 import "dotenv/config";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../server/routers";
-import { createContext } from "../server/_core/context";
-import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
-import { getSessionCookieOptions } from "../server/_core/cookies";
-import { sdk } from "../server/_core/sdk";
-import * as db from "../server/db";
+import { appRouter } from "./routers";
+import { createContext } from "./_core/context";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { sdk } from "./_core/sdk";
+import * as db from "./db";
 
 const app = express();
 
