@@ -106,3 +106,5 @@ temp/
 *.sqlite
 *.sqlite3
 Eva_Paradis/
+.vercel
+.env*.local
