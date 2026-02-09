@@ -1,15 +1,1 @@
-{
-  "version": 2,
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist/public",
-  "framework": "vite",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  }
-}
+{\n  "version": 2,\n  "buildCommand": "pnpm run build",\n  "outputDirectory": "dist/public",\n  "framework": "vite",\n  "rewrites": [\n    { "source": "/api/(.*)", "destination": "/api" },\n    { "source": "/(.*)", "destination": "/index.html" }\n  ]\n}
