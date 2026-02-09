@@ -40,11 +40,9 @@ export default function Home() {
     const dest = new URL(OF_URL);
     Object.keys(utm).forEach((key) => dest.searchParams.set(key, utm[key]));
 
-    // Open OF in new tab (direct click context = no popup blocker)
-    window.open(dest.toString(), "_blank");
-
-    // Show capture page in current tab
+    // Navigate current tab first (synchronous pushState), then open OF
     navigate("/capture");
+    window.open(dest.toString(), "_blank");
   };
 
   return (
