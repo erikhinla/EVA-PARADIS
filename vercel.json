@@ -1,9 +1,8 @@
 {
-  "version": 2,
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist/public",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "redirects": [
+    { "source": "/go/ig-story", "destination": "/?utm_source=instagram&utm_medium=story", "permanent": false },
+    { "source": "/go/x", "destination": "/?utm_source=x&utm_medium=post", "permanent": false },
+    { "source": "/go/reddit", "destination": "/?utm_source=reddit&utm_medium=post", "permanent": false },
+    { "source": "/go/redgifs", "destination": "/?utm_source=redgifs&utm_medium=post", "permanent": false }
   ]
 }

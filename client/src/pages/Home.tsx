@@ -1,22 +1,35 @@
 import { useRef, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import {
+  getAnalyticsSession,
+  getPageviewKey,
+  getStickyAttribution,
+  getStoredPageviewId,
+  storePageviewId,
+  type AnalyticsAttribution,
+} from "@/lib/analytics";
 
 const OF_URL = "https://onlyfans.com/evaparadis";
 const SESSION_KEY = "bridge_redirect_ts";
 
-function getUtmParams(): Record<string, string> {
-  const params = new URLSearchParams(window.location.search);
-  const utm: Record<string, string> = {};
-  params.forEach((value, key) => {
-    if (key.startsWith("utm_")) utm[key] = value;
-  });
-  return utm;
+function toUtmParams(attribution: AnalyticsAttribution): Record<string, string> {
+  return {
+    ...(attribution.utmSource ? { utm_source: attribution.utmSource } : {}),
+    ...(attribution.utmMedium ? { utm_medium: attribution.utmMedium } : {}),
+    ...(attribution.utmCampaign ? { utm_campaign: attribution.utmCampaign } : {}),
+    ...(attribution.utmContent ? { utm_content: attribution.utmContent } : {}),
+    ...(attribution.utmTerm ? { utm_term: attribution.utmTerm } : {}),
+  };
 }
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [, navigate] = useLocation();
+  const pageviewIdRef = useRef<number | null>(null);
+  const trackPageview = trpc.analytics.trackPageview.useMutation();
+  const trackClick = trpc.analytics.trackClick.useMutation();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -25,10 +38,55 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  useEffect(() => {
+    const session = getAnalyticsSession();
+    const attribution = getStickyAttribution();
+    const path = window.location.pathname;
+    const pageviewKey = getPageviewKey(session.id, path);
+    const storedPageviewId = getStoredPageviewId(pageviewKey);
+
+    if (storedPageviewId) {
+      pageviewIdRef.current = storedPageviewId;
+      return;
+    }
+
+    trackPageview
+      .mutateAsync({
+        sessionId: session.id,
+        path,
+        pageviewKey,
+        referrer: document.referrer || undefined,
+        attribution: Object.keys(attribution).length > 0 ? attribution : undefined,
+      })
+      .then((response) => {
+        if (response?.pageviewId) {
+          pageviewIdRef.current = response.pageviewId;
+          storePageviewId(pageviewKey, response.pageviewId);
+        }
+      })
+      .catch(() => {
+        // ignore tracking errors
+      });
+  }, [trackPageview]);
+
   const handleCta = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    const utm = getUtmParams();
+    const session = getAnalyticsSession();
+    const attribution = getStickyAttribution();
+    const utm = toUtmParams(attribution);
+    const pageviewId = pageviewIdRef.current;
+
+    if (pageviewId) {
+      trackClick.mutate({
+        pageviewId,
+        sessionId: session.id,
+        path: window.location.pathname,
+        target: "onlyfans",
+        clickUrl: OF_URL,
+        attribution: Object.keys(attribution).length > 0 ? attribution : undefined,
+      });
+    }
 
     // Store session state for capture page
     sessionStorage.setItem(SESSION_KEY, Date.now().toString());
@@ -37,12 +95,9 @@ export default function Home() {
     }
 
     // Build destination URL with UTMs
-    const dest = new URL(OF_URL);
-    Object.keys(utm).forEach((key) => dest.searchParams.set(key, utm[key]));
-
     // Navigate current tab first (synchronous pushState), then open OF
     navigate("/capture");
-    window.open(dest.toString(), "_blank");
+    window.open(OF_URL, "_blank");
   };
 
   return (

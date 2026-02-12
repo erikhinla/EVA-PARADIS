@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { analyticsRouter } from "./analyticsRouter";
 import { assetsRouter } from "./assetsRouter";
 import { queueRouter } from "./queueRouter";
 
@@ -22,6 +23,7 @@ export const appRouter = router({
   // Content management and publishing
   assets: assetsRouter,
   queue: queueRouter,
+  analytics: analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;
