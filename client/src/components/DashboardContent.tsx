@@ -40,11 +40,6 @@ export default function DashboardContent() {
   const [redgifsUrls, setRedgifsUrls] = useState<Record<number, string>>({});
   const [redditUrls, setRedditUrls] = useState<Record<number, string>>({});
 
-  // Get publishing mode
-  const { data: publishingMode } = trpc.queue.getPublishingMode.useQuery(undefined, {
-    refetchInterval: 60000, // Check mode every minute
-  });
-
   // tRPC queries and mutations
   const { data: assets = [], refetch: refetchAssets } = trpc.assets.list.useQuery(undefined, {
     refetchInterval: 5000, // Poll every 5 seconds
@@ -299,20 +294,10 @@ export default function DashboardContent() {
               </p>
             </div>
             <div className="flex items-center gap-6">
-              {/* Mode Indicator Badge */}
-              {publishingMode && (
-                <div className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 ${
-                  publishingMode.redgifs === 'auto' && publishingMode.reddit === 'auto'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {publishingMode.redgifs === 'auto' && publishingMode.reddit === 'auto' ? (
-                    <>⚡ Auto Mode</>
-                  ) : (
-                    <>✋ Manual Mode</>
-                  )}
-                </div>
-              )}
+              {/* Mode Indicator Badge - manual override disabled */}
+              <div className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 bg-green-500/20 text-green-400">
+                ⚡ Auto Mode
+              </div>
               {/* Tab Navigation */}
               <div className="flex bg-white/5 rounded-lg p-1">
                 <button
