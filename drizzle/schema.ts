@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -73,3 +73,61 @@ export const posts = mysqlTable("posts", {
 
 export type Post = typeof posts.$inferSelect;
 export type InsertPost = typeof posts.$inferInsert;
+
+/**
+ * Pageviews table - tracks landing page visits
+ */
+export const pageviews = mysqlTable(
+  "pageviews",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sessionId: varchar("sessionId", { length: 64 }).notNull(),
+    path: varchar("path", { length: 255 }).notNull(),
+    pageviewKey: varchar("pageviewKey", { length: 255 }).notNull().unique(),
+    referrer: text("referrer"),
+    utmSource: varchar("utmSource", { length: 100 }),
+    utmMedium: varchar("utmMedium", { length: 100 }),
+    utmCampaign: varchar("utmCampaign", { length: 150 }),
+    utmContent: varchar("utmContent", { length: 150 }),
+    utmTerm: varchar("utmTerm", { length: 150 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    sessionIdx: index("pageviews_session_idx").on(table.sessionId),
+    createdAtIdx: index("pageviews_created_at_idx").on(table.createdAt),
+    sourceIdx: index("pageviews_source_idx").on(table.utmSource),
+  })
+);
+
+export type Pageview = typeof pageviews.$inferSelect;
+export type InsertPageview = typeof pageviews.$inferInsert;
+
+/**
+ * Clicks table - tracks OnlyFans CTA clicks
+ */
+export const clicks = mysqlTable(
+  "clicks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pageviewId: int("pageviewId").notNull().references(() => pageviews.id),
+    sessionId: varchar("sessionId", { length: 64 }).notNull(),
+    path: varchar("path", { length: 255 }).notNull(),
+    target: varchar("target", { length: 64 }).default("onlyfans").notNull(),
+    clickUrl: text("clickUrl").notNull(),
+    utmSource: varchar("utmSource", { length: 100 }),
+    utmMedium: varchar("utmMedium", { length: 100 }),
+    utmCampaign: varchar("utmCampaign", { length: 150 }),
+    utmContent: varchar("utmContent", { length: 150 }),
+    utmTerm: varchar("utmTerm", { length: 150 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    pageviewIdx: index("clicks_pageview_idx").on(table.pageviewId),
+    sessionIdx: index("clicks_session_idx").on(table.sessionId),
+    createdAtIdx: index("clicks_created_at_idx").on(table.createdAt),
+    targetIdx: index("clicks_target_idx").on(table.target),
+  })
+);
+
+export type Click = typeof clicks.$inferSelect;
+export type InsertClick = typeof clicks.$inferInsert;
