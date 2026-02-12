@@ -2,6 +2,7 @@ const SESSION_KEY = "analytics_session";
 const ATTRIBUTION_KEY = "analytics_attribution";
 const PAGEVIEW_KEY = "analytics_pageview_key";
 const PAGEVIEW_ID_KEY = "analytics_pageview_id";
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type AnalyticsAttribution = {
@@ -124,7 +125,7 @@ export const getStickyAttribution = (): AnalyticsAttribution => {
 };
 
 export const getTenMinuteBucket = (timestamp = Date.now()) => {
-  return Math.floor(timestamp / 600000);
+  return Math.floor(timestamp / TEN_MINUTES_MS);
 };
 
 export const getPageviewKey = (sessionId: string, path: string, timestamp = Date.now()) => {
