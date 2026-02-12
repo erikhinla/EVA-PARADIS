@@ -43,7 +43,7 @@ export const analyticsRouter = router({
 
       await db.insert(pageviews).values(payload).onDuplicateKeyUpdate({
         set: {
-          pageviewKey: payload.pageviewKey,
+          referrer: payload.referrer ?? null,
         },
       });
 
