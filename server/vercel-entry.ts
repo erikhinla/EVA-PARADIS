@@ -15,12 +15,21 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Neutral relay routes for Instagram
+// /go — lands on bridge page (viewer only sees evaparadis.net)
 app.get("/go", (req, res) => {
   const bridgeUrl = process.env.SITE_URL ?? `${req.protocol}://${req.get("host")}`;
   const target = new URL("/", bridgeUrl);
+  // Preserve any incoming query params
   Object.entries(req.query).forEach(([key, value]) => {
     if (typeof value === "string") target.searchParams.set(key, value);
   });
+  // Default IG UTM if none provided
+  if (!target.searchParams.has("utm_source")) {
+    target.searchParams.set("utm_source", "instagram");
+  }
+  if (!target.searchParams.has("utm_medium")) {
+    target.searchParams.set("utm_medium", "dm");
+  }
   res.redirect(302, target.toString());
 });
 
