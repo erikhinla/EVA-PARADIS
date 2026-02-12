@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import {
   TrendingUp,
@@ -13,18 +13,16 @@ import {
   ChevronRight
 } from "lucide-react";
 
-const MOCK_LABEL = "Mock Data";
-
 interface MetricCardProps {
   title: string;
   value: string;
-  change: number;
+  change?: number;
   icon: React.ReactNode;
   subtitle?: string;
 }
 
 function MetricCard({ title, value, change, icon, subtitle }: MetricCardProps) {
-  const isPositive = change >= 0;
+  const isPositive = typeof change === "number" ? change >= 0 : true;
 
   return (
     <Card className="p-4 bg-white/5 border-white/10">
@@ -38,17 +36,19 @@ function MetricCard({ title, value, change, icon, subtitle }: MetricCardProps) {
           {icon}
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-1">
-        {isPositive ? (
-          <ArrowUpRight className="w-4 h-4 text-green-400" />
-        ) : (
-          <ArrowDownRight className="w-4 h-4 text-red-400" />
-        )}
-        <span className={`text-sm font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-          {isPositive ? '+' : ''}{change}%
-        </span>
-        <span className="text-white/40 text-xs">vs last week</span>
-      </div>
+      {typeof change === "number" && (
+        <div className="mt-3 flex items-center gap-1">
+          {isPositive ? (
+            <ArrowUpRight className="w-4 h-4 text-green-400" />
+          ) : (
+            <ArrowDownRight className="w-4 h-4 text-red-400" />
+          )}
+          <span className={`text-sm font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+            {isPositive ? '+' : ''}{change}%
+          </span>
+          <span className="text-white/40 text-xs">vs last week</span>
+        </div>
+      )}
     </Card>
   );
 }
@@ -108,7 +108,6 @@ function DmCard({ platform, icon, iconColor, gradientFrom, gradientTo, metrics }
           {icon}
           <h3 className="text-lg font-semibold text-white">{platform}</h3>
         </div>
-        <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL}</span>
       </div>
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -136,62 +135,145 @@ function DmCard({ platform, icon, iconColor, gradientFrom, gradientTo, metrics }
   );
 }
 
-export default function ConversionAnalytics() {
+interface DmMetric {
+  sent: number;
+  responses: number;
+  rate: number;
+}
+
+interface DmMetricsGroup {
+  reddit: DmMetric;
+  instagram: DmMetric;
+  x: DmMetric;
+}
+
+interface SummaryItem {
+  key: string;
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+interface EmailStats {
+  openRate: number;
+  clickRate: number;
+  unsubscribeRate: number;
+  weeklySignups: number;
+}
+
+interface AnalyticsSnapshot {
+  metrics: {
+    totalVisits: number;
+    uniqueVisitors: number;
+    ofClicks: number;
+    conversions: number;
+    conversionRate: number;
+    avgTimeOnPage: string;
+    bounceRate: number;
+    dmsSent: number;
+    dmResponses: number;
+    emailSignups: number;
+  };
+  trafficSources: TrafficSourceData[];
+  dmMetrics: DmMetricsGroup;
+  email: EmailStats;
+  summaryItems: SummaryItem[];
+}
+
+interface ConversionAnalyticsProps {
+  snapshot?: Partial<AnalyticsSnapshot>;
+}
+
+const ZERO_SNAPSHOT: AnalyticsSnapshot = {
+  metrics: {
+    totalVisits: 0,
+    uniqueVisitors: 0,
+    ofClicks: 0,
+    conversions: 0,
+    conversionRate: 0,
+    avgTimeOnPage: "0:00",
+    bounceRate: 0,
+    dmsSent: 0,
+    dmResponses: 0,
+    emailSignups: 0,
+  },
+  trafficSources: [],
+  dmMetrics: {
+    reddit: { sent: 0, responses: 0, rate: 0 },
+    instagram: { sent: 0, responses: 0, rate: 0 },
+    x: { sent: 0, responses: 0, rate: 0 },
+  },
+  email: {
+    openRate: 0,
+    clickRate: 0,
+    unsubscribeRate: 0,
+    weeklySignups: 0,
+  },
+  summaryItems: [],
+};
+
+function calculateRate(sent: number, responses: number, override?: number) {
+  if (typeof override === "number") {
+    return override;
+  }
+  if (!sent || sent === 0) {
+    return 0;
+  }
+  return Number(((responses / sent) * 100).toFixed(1));
+}
+
+function safePercent(numerator: number, denominator: number) {
+  if (!denominator) {
+    return 0;
+  }
+  return Number(((numerator / denominator) * 100).toFixed(1));
+}
+
+export default function ConversionAnalytics({ snapshot }: ConversionAnalyticsProps = {}) {
   const [summaryExpanded, setSummaryExpanded] = useState<string | null>(null);
 
-  // Mock data - will be replaced with Supabase queries when connected
-  const metrics = {
-    totalVisits: 12847,
-    uniqueVisitors: 8234,
-    ofClicks: 1456,
-    conversions: 89,
-    conversionRate: 3.2,
-    avgTimeOnPage: "2:34",
-    bounceRate: 42,
-    dmsSent: 234,
-    dmResponses: 67,
-    emailSignups: 156,
-  };
-
-  const trafficSources: TrafficSourceData[] = [
-    { source: "Reddit r/TransGoneWild", visits: 3420, conversions: 34, rate: 4.2, color: "bg-orange-500" },
-    { source: "Reddit r/Tgirls", visits: 2180, conversions: 21, rate: 3.8, color: "bg-orange-400" },
-    { source: "Reddit r/TransPorn", visits: 1560, conversions: 14, rate: 3.5, color: "bg-orange-300" },
-    { source: "Reddit r/GroupSex", visits: 980, conversions: 8, rate: 3.1, color: "bg-orange-200" },
-    { source: "RedGifs", visits: 2340, conversions: 18, rate: 2.7, color: "bg-red-500" },
-    { source: "X (Twitter)", visits: 1780, conversions: 11, rate: 2.4, color: "bg-sky-500" },
-    { source: "Instagram Bio", visits: 1890, conversions: 15, rate: 2.9, color: "bg-pink-500" },
-    { source: "Instagram DM", visits: 1240, conversions: 12, rate: 3.1, color: "bg-pink-400" },
-    { source: "TikTok", visits: 920, conversions: 4, rate: 1.4, color: "bg-cyan-400" },
-    { source: "Direct", visits: 3227, conversions: 2, rate: 0.6, color: "bg-zinc-500" },
-  ];
-
-  const dmMetrics = {
-    reddit: { sent: 156, responses: 42, rate: 26.9 },
-    instagram: { sent: 78, responses: 25, rate: 32.1 },
-    x: { sent: 64, responses: 12, rate: 18.8 },
-  };
-
-  const summaryItems = [
-    {
-      key: "bestSource",
-      label: "Best Performing Source",
-      value: "Reddit r/TransGoneWild (4.2% conv.)",
-      detail: "r/TransGoneWild consistently converts at 4.2%, outperforming all other sources. Consider increasing post frequency and testing new content formats in this subreddit.",
+  const analytics = useMemo<AnalyticsSnapshot>(() => ({
+    metrics: { ...ZERO_SNAPSHOT.metrics, ...(snapshot?.metrics ?? {}) },
+    trafficSources: snapshot?.trafficSources ?? ZERO_SNAPSHOT.trafficSources,
+    dmMetrics: {
+      reddit: {
+        sent: snapshot?.dmMetrics?.reddit?.sent ?? ZERO_SNAPSHOT.dmMetrics.reddit.sent,
+        responses: snapshot?.dmMetrics?.reddit?.responses ?? ZERO_SNAPSHOT.dmMetrics.reddit.responses,
+        rate: calculateRate(
+          snapshot?.dmMetrics?.reddit?.sent ?? ZERO_SNAPSHOT.dmMetrics.reddit.sent,
+          snapshot?.dmMetrics?.reddit?.responses ?? ZERO_SNAPSHOT.dmMetrics.reddit.responses,
+          snapshot?.dmMetrics?.reddit?.rate
+        ),
+      },
+      instagram: {
+        sent: snapshot?.dmMetrics?.instagram?.sent ?? ZERO_SNAPSHOT.dmMetrics.instagram.sent,
+        responses: snapshot?.dmMetrics?.instagram?.responses ?? ZERO_SNAPSHOT.dmMetrics.instagram.responses,
+        rate: calculateRate(
+          snapshot?.dmMetrics?.instagram?.sent ?? ZERO_SNAPSHOT.dmMetrics.instagram.sent,
+          snapshot?.dmMetrics?.instagram?.responses ?? ZERO_SNAPSHOT.dmMetrics.instagram.responses,
+          snapshot?.dmMetrics?.instagram?.rate
+        ),
+      },
+      x: {
+        sent: snapshot?.dmMetrics?.x?.sent ?? ZERO_SNAPSHOT.dmMetrics.x.sent,
+        responses: snapshot?.dmMetrics?.x?.responses ?? ZERO_SNAPSHOT.dmMetrics.x.responses,
+        rate: calculateRate(
+          snapshot?.dmMetrics?.x?.sent ?? ZERO_SNAPSHOT.dmMetrics.x.sent,
+          snapshot?.dmMetrics?.x?.responses ?? ZERO_SNAPSHOT.dmMetrics.x.responses,
+          snapshot?.dmMetrics?.x?.rate
+        ),
+      },
     },
-    {
-      key: "bestScript",
-      label: "Best DM Script",
-      value: "R2: Profile Follow-up (32% response)",
-      detail: "The R2 script (profile follow-up after initial engagement) drives a 32% response rate on Instagram. Adapt this approach for X and Reddit DMs.",
-    },
-    {
-      key: "recommendation",
-      label: "Recommendation",
-      value: "Increase Reddit posting frequency",
-      detail: "Reddit subreddits drive the highest conversion rates. Scaling from 3 to 5 posts/day across top subreddits could yield ~40% more conversions.",
-    },
-  ];
+    email: { ...ZERO_SNAPSHOT.email, ...(snapshot?.email ?? {}) },
+    summaryItems: snapshot?.summaryItems ?? ZERO_SNAPSHOT.summaryItems,
+  }), [snapshot]);
+
+  const ctr = safePercent(analytics.metrics.ofClicks, analytics.metrics.totalVisits);
+  const hasTrafficSources = analytics.trafficSources.length > 0;
+  const hasSummaryItems = analytics.summaryItems.length > 0;
+  const weeklySignupCopy = analytics.email.weeklySignups > 0
+    ? `+${analytics.email.weeklySignups} this week`
+    : "No new signups yet";
 
   return (
     <div className="space-y-6">
@@ -201,12 +283,9 @@ export default function ConversionAnalytics() {
           <h2 className="text-xl font-bold text-white">Conversion Analytics</h2>
           <p className="text-white/60 text-sm">Last 7 days</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL} — No live Supabase connection</span>
-          <div className="flex items-center gap-2 text-xs text-white/40">
-            <span className="w-2 h-2 rounded-full bg-yellow-400" />
-            No live data
-          </div>
+        <div className="flex items-center gap-2 text-xs text-white/40">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          Live data (defaults to zero)
         </div>
       </div>
 
@@ -214,29 +293,25 @@ export default function ConversionAnalytics() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard
           title="Bridge Visits"
-          value={metrics.totalVisits.toLocaleString()}
-          change={12}
+          value={analytics.metrics.totalVisits.toLocaleString()}
           icon={<Globe className="w-5 h-5 text-amber-400" />}
-          subtitle={`${metrics.uniqueVisitors.toLocaleString()} unique`}
+          subtitle={`${analytics.metrics.uniqueVisitors.toLocaleString()} unique`}
         />
         <MetricCard
           title="OF Clicks"
-          value={metrics.ofClicks.toLocaleString()}
-          change={8}
+          value={analytics.metrics.ofClicks.toLocaleString()}
           icon={<MousePointerClick className="w-5 h-5 text-amber-400" />}
-          subtitle={`${((metrics.ofClicks / metrics.totalVisits) * 100).toFixed(1)}% CTR`}
+          subtitle={`${ctr.toFixed(1)}% CTR`}
         />
         <MetricCard
           title="Conversions"
-          value={metrics.conversions.toString()}
-          change={15}
+          value={analytics.metrics.conversions.toString()}
           icon={<DollarSign className="w-5 h-5 text-amber-400" />}
           subtitle="New subscribers"
         />
         <MetricCard
           title="Conv. Rate"
-          value={`${metrics.conversionRate}%`}
-          change={3}
+          value={`${analytics.metrics.conversionRate}%`}
           icon={<TrendingUp className="w-5 h-5 text-amber-400" />}
           subtitle="Target: 3%+"
         />
@@ -248,7 +323,7 @@ export default function ConversionAnalytics() {
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-amber-400" />
             <h3 className="text-lg font-semibold text-white">Traffic Sources</h3>
-            <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL}</span>
+            <span className="text-xs text-white/40">{hasTrafficSources ? `${analytics.trafficSources.length} sources` : "No sources yet"}</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-white/40">
             <span className="w-16 text-right">Visits</span>
@@ -257,11 +332,17 @@ export default function ConversionAnalytics() {
             <span className="w-4" /> {/* spacer for chevron */}
           </div>
         </div>
-        <div className="space-y-1">
-          {trafficSources.map((source) => (
-            <TrafficSourceRow key={source.source} {...source} />
-          ))}
-        </div>
+        {hasTrafficSources ? (
+          <div className="space-y-1">
+            {analytics.trafficSources.map((source) => (
+              <TrafficSourceRow key={source.source} {...source} />
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-white/40 text-sm border border-dashed border-white/10 rounded-lg">
+            No tracked traffic sources yet.
+          </div>
+        )}
       </Card>
 
       {/* DM Performance */}
@@ -272,7 +353,7 @@ export default function ConversionAnalytics() {
           iconColor="text-orange-400"
           gradientFrom="from-orange-500"
           gradientTo="to-orange-400"
-          metrics={dmMetrics.reddit}
+          metrics={analytics.dmMetrics.reddit}
         />
         <DmCard
           platform="Instagram DMs"
@@ -280,7 +361,7 @@ export default function ConversionAnalytics() {
           iconColor="text-pink-400"
           gradientFrom="from-pink-500"
           gradientTo="to-pink-400"
-          metrics={dmMetrics.instagram}
+          metrics={analytics.dmMetrics.instagram}
         />
         <DmCard
           platform="X DMs"
@@ -288,7 +369,7 @@ export default function ConversionAnalytics() {
           iconColor="text-sky-400"
           gradientFrom="from-sky-500"
           gradientTo="to-sky-400"
-          metrics={dmMetrics.x}
+          metrics={analytics.dmMetrics.x}
         />
       </div>
 
@@ -297,28 +378,24 @@ export default function ConversionAnalytics() {
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-amber-400" />
           <h3 className="text-lg font-semibold text-white">Email List</h3>
-          <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL}</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Total Signups</p>
-            <p className="text-2xl font-bold text-white">{metrics.emailSignups}</p>
-            <p className="text-green-400 text-xs font-medium mt-1">+23 this week</p>
+            <p className="text-2xl font-bold text-white">{analytics.metrics.emailSignups}</p>
+            <p className="text-green-400 text-xs font-medium mt-1">{weeklySignupCopy}</p>
           </div>
           <div>
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Open Rate</p>
-            <p className="text-2xl font-bold text-white">38.2%</p>
-            <p className="text-white/30 text-xs mt-1">(mock)</p>
+            <p className="text-2xl font-bold text-white">{analytics.email.openRate.toFixed(1)}%</p>
           </div>
           <div>
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Click Rate</p>
-            <p className="text-2xl font-bold text-white">12.4%</p>
-            <p className="text-white/30 text-xs mt-1">(mock)</p>
+            <p className="text-2xl font-bold text-white">{analytics.email.clickRate.toFixed(1)}%</p>
           </div>
           <div>
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Unsubscribe Rate</p>
-            <p className="text-2xl font-bold text-white">0.8%</p>
-            <p className="text-white/30 text-xs mt-1">(mock)</p>
+            <p className="text-2xl font-bold text-white">{analytics.email.unsubscribeRate.toFixed(1)}%</p>
           </div>
         </div>
       </Card>
@@ -327,34 +404,39 @@ export default function ConversionAnalytics() {
       <Card className="p-6 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">Performance Summary</h3>
-          <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{MOCK_LABEL}</span>
         </div>
-        <div className="grid md:grid-cols-3 gap-4 text-sm">
-          {summaryItems.map((item) => (
-            <div
-              key={item.key}
-              className="space-y-2 cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors group"
-              onClick={() => {
-                setSummaryExpanded(summaryExpanded === item.key ? null : item.key);
-                console.log(`[Performance Summary] Clicked: ${item.label}`);
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') setSummaryExpanded(summaryExpanded === item.key ? null : item.key); }}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-white/60">{item.label}</p>
-                <ChevronRight className={`w-4 h-4 text-white/20 group-hover:text-white/60 transition-all ${summaryExpanded === item.key ? 'rotate-90' : ''}`} />
+        {hasSummaryItems ? (
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            {analytics.summaryItems.map((item) => (
+              <div
+                key={item.key}
+                className="space-y-2 cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors group"
+                onClick={() => {
+                  setSummaryExpanded(summaryExpanded === item.key ? null : item.key);
+                  console.log(`[Performance Summary] Clicked: ${item.label}`);
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') setSummaryExpanded(summaryExpanded === item.key ? null : item.key); }}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-white/60">{item.label}</p>
+                  <ChevronRight className={`w-4 h-4 text-white/20 group-hover:text-white/60 transition-all ${summaryExpanded === item.key ? 'rotate-90' : ''}`} />
+                </div>
+                <p className={`font-medium ${item.key === 'recommendation' ? 'text-amber-400' : 'text-white'}`}>
+                  {item.value}
+                </p>
+                {summaryExpanded === item.key && item.detail && (
+                  <p className="text-white/40 text-xs mt-1 leading-relaxed">{item.detail}</p>
+                )}
               </div>
-              <p className={`font-medium ${item.key === 'recommendation' ? 'text-amber-400' : 'text-white'}`}>
-                {item.value}
-              </p>
-              {summaryExpanded === item.key && (
-                <p className="text-white/40 text-xs mt-1 leading-relaxed">{item.detail}</p>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-white/50 text-sm">
+            No performance notes yet. Insights will appear once data is captured.
+          </div>
+        )}
       </Card>
     </div>
   );

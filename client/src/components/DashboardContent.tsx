@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import ConversionAnalytics from "./ConversionAnalytics";
+import LinkHealthPanel from "./LinkHealthPanel";
 
 // Concept tags for the dropdown
 const CONCEPT_TAGS = [
@@ -28,7 +29,7 @@ const SUBREDDIT_OPTIONS = [
 ];
 
 export default function DashboardContent() {
-  const [activeTab, setActiveTab] = useState<"posting" | "analytics">("posting");
+  const [activeTab, setActiveTab] = useState<"posting" | "analytics" | "linkhealth">("posting");
   const [conceptName, setConceptName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -38,11 +39,6 @@ export default function DashboardContent() {
   // Manual mode state
   const [redgifsUrls, setRedgifsUrls] = useState<Record<number, string>>({});
   const [redditUrls, setRedditUrls] = useState<Record<number, string>>({});
-
-  // Get publishing mode
-  const { data: publishingMode } = trpc.queue.getPublishingMode.useQuery(undefined, {
-    refetchInterval: 60000, // Check mode every minute
-  });
 
   // tRPC queries and mutations
   const { data: assets = [], refetch: refetchAssets } = trpc.assets.list.useQuery(undefined, {
@@ -294,24 +290,14 @@ export default function DashboardContent() {
             <div>
               <h1 className="text-2xl font-bold text-white">Eva Dashboard</h1>
               <p className="text-white/60 text-sm">
-                {activeTab === "posting" ? "Manual Posting Control" : "Conversion Analytics"}
+                {activeTab === "posting" ? "Manual Posting Control" : activeTab === "analytics" ? "Conversion Analytics" : "Link Diagnostics"}
               </p>
             </div>
             <div className="flex items-center gap-6">
-              {/* Mode Indicator Badge */}
-              {publishingMode && (
-                <div className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 ${
-                  publishingMode.redgifs === 'auto' && publishingMode.reddit === 'auto'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {publishingMode.redgifs === 'auto' && publishingMode.reddit === 'auto' ? (
-                    <>⚡ Auto Mode</>
-                  ) : (
-                    <>✋ Manual Mode</>
-                  )}
-                </div>
-              )}
+              {/* Mode Indicator Badge - manual override disabled */}
+              <div className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 bg-green-500/20 text-green-400">
+                ⚡ Auto Mode
+              </div>
               {/* Tab Navigation */}
               <div className="flex bg-white/5 rounded-lg p-1">
                 <button
@@ -333,6 +319,16 @@ export default function DashboardContent() {
                   }`}
                 >
                   Analytics
+                </button>
+                <button
+                  onClick={() => setActiveTab("linkhealth")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === "linkhealth"
+                      ? "bg-amber-500 text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Link Health
                 </button>
               </div>
               {/* Stats */}
@@ -357,6 +353,8 @@ export default function DashboardContent() {
       <div className="container py-8">
         {activeTab === "analytics" ? (
           <ConversionAnalytics />
+        ) : activeTab === "linkhealth" ? (
+          <LinkHealthPanel />
         ) : (
         <div className="grid gap-6">
           {/* Ingest Module */}
