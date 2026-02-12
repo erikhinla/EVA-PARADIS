@@ -14,6 +14,24 @@ const app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Neutral relay routes for Instagram
+app.get("/go", (req, res) => {
+  const bridgeUrl = process.env.SITE_URL ?? `${req.protocol}://${req.get("host")}`;
+  const target = new URL("/", bridgeUrl);
+  Object.entries(req.query).forEach(([key, value]) => {
+    if (typeof value === "string") target.searchParams.set(key, value);
+  });
+  res.redirect(302, target.toString());
+});
+
+app.get("/go/of", (req, res) => {
+  const target = new URL("https://onlyfans.com/evaparadis");
+  Object.entries(req.query).forEach(([key, value]) => {
+    if (typeof value === "string") target.searchParams.set(key, value);
+  });
+  res.redirect(302, target.toString());
+});
+
 // OAuth callback route
 app.get("/api/oauth/callback", async (req, res) => {
   const code = typeof req.query.code === "string" ? req.query.code : undefined;

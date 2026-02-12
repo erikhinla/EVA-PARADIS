@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import ConversionAnalytics from "./ConversionAnalytics";
+import LinkHealthPanel from "./LinkHealthPanel";
 
 // Concept tags for the dropdown
 const CONCEPT_TAGS = [
@@ -28,7 +29,7 @@ const SUBREDDIT_OPTIONS = [
 ];
 
 export default function DashboardContent() {
-  const [activeTab, setActiveTab] = useState<"posting" | "analytics">("posting");
+  const [activeTab, setActiveTab] = useState<"posting" | "analytics" | "linkhealth">("posting");
   const [conceptName, setConceptName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -294,7 +295,7 @@ export default function DashboardContent() {
             <div>
               <h1 className="text-2xl font-bold text-white">Eva Dashboard</h1>
               <p className="text-white/60 text-sm">
-                {activeTab === "posting" ? "Manual Posting Control" : "Conversion Analytics"}
+                {activeTab === "posting" ? "Manual Posting Control" : activeTab === "analytics" ? "Conversion Analytics" : "Link Diagnostics"}
               </p>
             </div>
             <div className="flex items-center gap-6">
@@ -334,6 +335,16 @@ export default function DashboardContent() {
                 >
                   Analytics
                 </button>
+                <button
+                  onClick={() => setActiveTab("linkhealth")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === "linkhealth"
+                      ? "bg-amber-500 text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Link Health
+                </button>
               </div>
               {/* Stats */}
               {activeTab === "posting" && (
@@ -357,6 +368,8 @@ export default function DashboardContent() {
       <div className="container py-8">
         {activeTab === "analytics" ? (
           <ConversionAnalytics />
+        ) : activeTab === "linkhealth" ? (
+          <LinkHealthPanel />
         ) : (
         <div className="grid gap-6">
           {/* Ingest Module */}

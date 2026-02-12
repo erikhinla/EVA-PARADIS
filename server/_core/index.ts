@@ -43,6 +43,36 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Neutral relay routes for Instagram
+  app.get("/go", (req, res) => {
+    // Relay to bridge page (safe for IG story stickers)
+    const bridgeUrl = process.env.SITE_URL ?? `${req.protocol}://${req.get("host")}`;
+    const target = new URL("/", bridgeUrl);
+
+    // Preserve all query parameters (UTMs)
+    Object.entries(req.query).forEach(([key, value]) => {
+      if (typeof value === "string") {
+        target.searchParams.set(key, value);
+      }
+    });
+
+    res.redirect(302, target.toString());
+  });
+
+  app.get("/go/of", (req, res) => {
+    // Relay to OnlyFans (neutral second-hop for CTAs)
+    const target = new URL("https://onlyfans.com/evaparadis");
+
+    // Preserve all query parameters (UTMs)
+    Object.entries(req.query).forEach(([key, value]) => {
+      if (typeof value === "string") {
+        target.searchParams.set(key, value);
+      }
+    });
+
+    res.redirect(302, target.toString());
+  });
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
