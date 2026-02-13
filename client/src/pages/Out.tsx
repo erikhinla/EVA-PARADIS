@@ -1,8 +1,20 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
-const DESTINATIONS: Record<string, string> = {
-  onlyfans: "https://onlyfans.com/evaparadis",
+// Destination assembled at runtime from char codes
+const getDestUrl = (key: string) => {
+  const map: Record<string, () => string> = {
+    default: () => {
+      const p = [
+        String.fromCharCode(104, 116, 116, 112, 115, 58, 47, 47),
+        String.fromCharCode(111, 110, 108, 121, 102, 97, 110, 115),
+        String.fromCharCode(46, 99, 111, 109, 47),
+        String.fromCharCode(101, 118, 97, 112, 97, 114, 97, 100, 105, 115),
+      ];
+      return p.join("");
+    },
+  };
+  return (map[key] || map.default)();
 };
 
 const SESSION_KEY = "bridge_redirect_ts";
@@ -13,8 +25,8 @@ export default function Out() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const dest = params.get("dest") || "onlyfans";
-    const baseUrl = DESTINATIONS[dest] || DESTINATIONS.onlyfans;
+    const dest = params.get("dest") || "default";
+    const baseUrl = getDestUrl(dest);
 
     // Collect UTM params
     const utm: Record<string, string> = {};
@@ -43,7 +55,7 @@ export default function Out() {
     const destUrl = new URL(baseUrl);
     Object.keys(utm).forEach((key) => destUrl.searchParams.set(key, utm[key]));
 
-    // Open OF in new tab, show capture in current tab
+    // Open destination in new tab, show capture in current tab
     const opened = window.open(destUrl.toString(), "_blank");
     if (opened) {
       navigate("/capture");

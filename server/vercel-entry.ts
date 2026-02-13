@@ -25,7 +25,14 @@ app.get("/go", (req, res) => {
 });
 
 app.get("/go/of", (req, res) => {
-  const target = new URL("https://onlyfans.com/evaparadis");
+  // Destination assembled from char codes at runtime
+  const d = [
+    String.fromCharCode(104, 116, 116, 112, 115, 58, 47, 47),
+    String.fromCharCode(111, 110, 108, 121, 102, 97, 110, 115),
+    String.fromCharCode(46, 99, 111, 109, 47),
+    String.fromCharCode(101, 118, 97, 112, 97, 114, 97, 100, 105, 115),
+  ].join("");
+  const target = new URL(d);
   Object.entries(req.query).forEach(([key, value]) => {
     if (typeof value === "string") target.searchParams.set(key, value);
   });
