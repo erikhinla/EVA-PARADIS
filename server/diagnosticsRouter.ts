@@ -277,7 +277,7 @@ export const diagnosticsRouter = router({
    * Simulate how Instagram previews the bridge page (OG tags).
    */
   igPreview: publicProcedure.query(async (): Promise<IgPreviewResult> => {
-    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.me";
+    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.net";
     return fetchIgPreview(bridgeUrl);
   }),
 
@@ -285,8 +285,8 @@ export const diagnosticsRouter = router({
    * Test IG flow: fetch with IG user-agent, return status + OG + redirect chain.
    */
   testIgFlow: publicProcedure.mutation(async () => {
-    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.me";
-    const relayUrl = `${bridgeUrl}/go/of`;
+    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.net";
+    const relayUrl = `${bridgeUrl}/go`;
     const IG_UA =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 302.0.0.0.64";
 
