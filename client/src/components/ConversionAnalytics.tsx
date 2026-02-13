@@ -10,8 +10,10 @@ import {
   Globe,
   MessageCircle,
   Mail,
-  ChevronRight
+  ChevronRight,
+  Users
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 interface MetricCardProps {
   title: string;
@@ -232,6 +234,11 @@ function safePercent(numerator: number, denominator: number) {
 export default function ConversionAnalytics({ snapshot }: ConversionAnalyticsProps = {}) {
   const [summaryExpanded, setSummaryExpanded] = useState<string | null>(null);
 
+  // Fetch detailed lead stats for Email List section
+  const { data: leadsStats } = trpc.analytics.leadsStats.useQuery(undefined, {
+    refetchInterval: 30000,
+  });
+
   const analytics = useMemo<AnalyticsSnapshot>(() => ({
     metrics: { ...ZERO_SNAPSHOT.metrics, ...(snapshot?.metrics ?? {}) },
     trafficSources: snapshot?.trafficSources ?? ZERO_SNAPSHOT.trafficSources,
@@ -379,11 +386,23 @@ export default function ConversionAnalytics({ snapshot }: ConversionAnalyticsPro
           <Mail className="w-5 h-5 text-amber-400" />
           <h3 className="text-lg font-semibold text-white">Email List</h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div>
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Total Signups</p>
-            <p className="text-2xl font-bold text-white">{analytics.metrics.emailSignups}</p>
-            <p className="text-green-400 text-xs font-medium mt-1">{weeklySignupCopy}</p>
+            <p className="text-2xl font-bold text-white">
+              {leadsStats?.total_signups ?? analytics.metrics.emailSignups}
+            </p>
+            <p className="text-green-400 text-xs font-medium mt-1">
+              {(leadsStats?.this_week_signups ?? analytics.email.weeklySignups) > 0
+                ? `+${leadsStats?.this_week_signups ?? analytics.email.weeklySignups} this week`
+                : "No new signups yet"}
+            </p>
+          </div>
+          <div>
+            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">This Week</p>
+            <p className="text-2xl font-bold text-white">
+              {leadsStats?.this_week_signups ?? analytics.email.weeklySignups}
+            </p>
           </div>
           <div>
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Open Rate</p>
@@ -393,11 +412,39 @@ export default function ConversionAnalytics({ snapshot }: ConversionAnalyticsPro
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Click Rate</p>
             <p className="text-2xl font-bold text-white">{analytics.email.clickRate.toFixed(1)}%</p>
           </div>
-          <div>
-            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Unsubscribe Rate</p>
-            <p className="text-2xl font-bold text-white">{analytics.email.unsubscribeRate.toFixed(1)}%</p>
-          </div>
         </div>
+
+        {/* Recent Leads Table */}
+        {leadsStats && leadsStats.recent_leads.length > 0 ? (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-amber-400" />
+              <p className="text-white/60 text-xs uppercase tracking-wider">Recent Leads</p>
+            </div>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {leadsStats.recent_leads.map((lead) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between py-2 px-3 rounded bg-white/5 text-sm"
+                >
+                  <span className="text-white truncate max-w-[200px]">{lead.email}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-white/40 text-xs">{lead.source}</span>
+                    <span className="text-white/30 text-xs">
+                      {lead.captured_at
+                        ? new Date(lead.captured_at).toLocaleDateString()
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="py-4 text-center text-white/40 text-sm border border-dashed border-white/10 rounded-lg">
+            No leads captured yet.
+          </div>
+        )}
       </Card>
 
       {/* Performance Summary */}

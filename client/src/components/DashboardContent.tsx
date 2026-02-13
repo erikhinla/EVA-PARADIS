@@ -99,6 +99,11 @@ export default function DashboardContent() {
     },
   });
 
+  const { data: analyticsSnapshot } = trpc.analytics.getSnapshot.useQuery(undefined, {
+    refetchInterval: 30000,
+    enabled: activeTab === "analytics",
+  });
+
   // Convert file to base64
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -352,7 +357,7 @@ export default function DashboardContent() {
 
       <div className="container py-8">
         {activeTab === "analytics" ? (
-          <ConversionAnalytics />
+          <ConversionAnalytics snapshot={analyticsSnapshot} />
         ) : activeTab === "linkhealth" ? (
           <LinkHealthPanel />
         ) : (
