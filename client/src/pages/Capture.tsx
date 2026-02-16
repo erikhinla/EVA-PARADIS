@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 const SESSION_KEY = "bridge_redirect_ts";
 
@@ -8,40 +9,42 @@ export default function Capture() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const emailSignup = trpc.analytics.emailSignup.useMutation();
 
   // No strict guard — always show the capture page.
   // If someone lands here directly it still works as a standalone email capture.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    setErrorMessage(null);
+    if (!email.trim()) {
+      setErrorMessage("Email is required");
+      return;
+    }
 
     setLoading(true);
 
     const utmRaw = sessionStorage.getItem("bridge_utm");
     const utm = utmRaw ? JSON.parse(utmRaw) : {};
 
-    const payload = {
-      email: email.trim(),
-      source: "bridge_return",
-      referrer: document.referrer || null,
-      utm,
-      capturedAt: new Date().toISOString(),
-    };
+    const trimmedEmail = email.trim();
 
-    // Store locally — backend route can be wired later
     try {
-      const existing = JSON.parse(localStorage.getItem("bridge_emails") || "[]");
-      existing.push(payload);
-      localStorage.setItem("bridge_emails", JSON.stringify(existing));
-    } catch {
-      // ignore storage errors
+      await emailSignup.mutateAsync({
+        email: trimmedEmail,
+        source: "bridge_return",
+        utmSource: utm.utm_source,
+        utmMedium: utm.utm_medium,
+        utmCampaign: utm.utm_campaign,
+        referrer: document.referrer || undefined,
+      });
+    } catch (err) {
+      console.error("[Capture] Email signup failed", err);
+      setErrorMessage("Something went wrong. Please try again.");
+      setLoading(false);
+      return;
     }
-
-    console.log("[Capture] Email collected:", payload);
-
-    // Simulate brief delay for UX
-    await new Promise((r) => setTimeout(r, 600));
 
     setSubmitted(true);
     setLoading(false);
@@ -78,6 +81,11 @@ export default function Capture() {
               className="w-full px-4 py-3 bg-black/60 border border-[#D4AF37]/40 text-white placeholder:text-white/30 text-sm tracking-wider outline-none focus:border-[#D4AF37] transition-colors"
               style={{ fontFamily: "'Cormorant Garamond', serif" }}
             />
+            {errorMessage && (
+              <p className="text-sm text-red-300" role="alert">
+                {errorMessage}
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading}
