@@ -1,92 +1,60 @@
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+/**
+ * Database access layer — Supabase PostgreSQL
+ * Replaces the previous Drizzle ORM / MySQL implementation.
+ * All queries go through the Supabase client using the service_role key.
+ */
+import { getSupabaseClient } from "./_core/supabase";
+import type { User, InsertUser } from "../shared/types";
 
-let _db: ReturnType<typeof drizzle> | null = null;
-
-// Lazily create the drizzle instance so local tooling can run without a DB.
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
-  }
-  return _db;
-}
-
+/**
+ * Upsert a user record. If the open_id already exists, update the
+ * mutable fields; otherwise insert a new row.
+ */
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
+  if (!user.open_id) {
+    throw new Error("User open_id is required for upsert");
   }
 
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
+  const supabase = getSupabaseClient();
 
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
+  const record: Record<string, unknown> = {
+    open_id: user.open_id,
+    last_signed_in: user.last_signed_in ?? new Date().toISOString(),
+  };
 
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
+  if (user.name !== undefined) record.name = user.name;
+  if (user.email !== undefined) record.email = user.email;
+  if (user.login_method !== undefined) record.login_method = user.login_method;
+  if (user.role !== undefined) record.role = user.role;
 
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
+  const { error } = await supabase
+    .from("users")
+    .upsert(record, { onConflict: "open_id" });
 
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
+  if (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
   }
 }
 
-export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+/**
+ * Look up a user by their OAuth open_id.
+ */
+export async function getUserByOpenId(openId: string): Promise<User | undefined> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("open_id", openId)
+    .limit(1)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    // PGRST116 = "no rows returned" — not a real error
+    console.error("[Database] Failed to get user:", error);
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return (data as User) ?? undefined;
 }
-
-// TODO: add feature queries here as your schema grows.

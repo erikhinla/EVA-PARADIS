@@ -97,7 +97,7 @@ const KPI_CARDS: KpiCard[] = [
   { label: "ALL-TIME SUBS", value: "65,255", sub: "56K new / 9.2K renews", status: "needs_verify" },
   { label: "RENEW RATE", value: "16.5%", sub: "83.5% churn after 1st period", status: "needs_verify" },
   { label: "LIFETIME SUB $", value: "$272,883", sub: "All-time subscription earnings", status: "needs_verify" },
-  { label: "WHALES AT RISK", value: "3", sub: "Charles, mrwan, Simone", status: "estimated" },
+  { label: "NEEDS ATTENTION", value: "3", sub: "Charles, mrwan, Simone", status: "estimated" },
 ];
 
 const REVENUE_ROWS: RevenueRow[] = [
@@ -107,7 +107,7 @@ const REVENUE_ROWS: RevenueRow[] = [
 ];
 
 const WHALES: Whale[] = [
-  { name: "Charles_Peligro", badge: "LIFETIME VIP", note: "#1 ALL-TIME — Rebill OFF, expires Feb 18. 5-year fan. URGENT re-engage.", ltv: 4192, lastActive: "Feb 3", risk: "HIGH", subs: 243, messages: 1505, tips: 2445 },
+  { name: "Charles_Peligro", badge: "LIFETIME VIP", note: "#1 all-time. Rebill off, expires Feb 18. 5-year fan.", ltv: 4192, lastActive: "Feb 3", risk: "HIGH", subs: 243, messages: 1505, tips: 2445 },
   { name: "mrwan", badge: "DIAMOND VIP", note: "High spender — 16 days inactive", ltv: 1030, lastActive: "Jan 28", risk: "HIGH", subs: 32, messages: 438, tips: 560 },
   { name: "Simone", badge: "LIFETIME VIP", note: "Custom content buyer — 11 days inactive", ltv: 1174, lastActive: "Feb 2", risk: "MEDIUM", subs: 147, messages: 302, tips: 726 },
   { name: "Lidovale_Traine", note: "#2 Subs, #3 Messages", ltv: 2134, lastActive: "—", risk: "LOW", subs: 509, messages: 1282, tips: 0 },
@@ -123,7 +123,7 @@ const WHALES: Whale[] = [
 ];
 
 const INITIATIVES: Initiative[] = [
-  { rank: 1, status: "NOT STARTED", name: "Whale retention — Charles expires Feb 18", priority: "VERY HIGH", current: "No system in place", effort: "Low", next: "DM outreach NOW" },
+  { rank: 1, status: "NOT STARTED", name: "VIP retention — Charles expires Feb 18", priority: "VERY HIGH", current: "No system in place", effort: "Low", next: "DM outreach" },
   { rank: 2, status: "PARTIAL", name: "Email capture → welcome sequence → sub recovery", priority: "VERY HIGH", current: "UI built, no backend", effort: "Medium", next: "Connect Brevo, build 4-email sequence" },
   { rank: 3, status: "PARTIAL", name: "PPV cadence optimization — coordinate w/ PPV team", priority: "VERY HIGH", current: "Active but uncoordinated", effort: "Low", next: "Align on calendar" },
   { rank: 4, status: "LIVE", name: "Bridge page with working IG Story link", priority: "HIGH", current: "LIVE — PR #10 merged", effort: "Done", next: "Done" },
@@ -174,13 +174,13 @@ const KEY_METRICS: KeyMetric[] = [
   { label: "CREATOR RANK", current: "Top 2.8%", target: "Top 1%", pct: 72, status: "verified" },
   { label: "EMAIL LIST", current: "0", target: "3,000", pct: 0, status: "needs_verify" },
   { label: "PRESS PLACEMENTS", current: "0", target: "4-5", pct: 0, status: "needs_verify" },
-  { label: "WHALES AT RISK", current: "3", target: "0", pct: 100, status: "estimated" },
+  { label: "NEEDS ATTENTION", current: "3", target: "0", pct: 100, status: "estimated" },
 ];
 
 const PRIORITY_ACTIONS = {
   thisWeek: [
     { text: "DONE: PR #10 merged — IG Story link now live at evaparadis.net", owner: "Erik", done: true },
-    { text: "URGENT: Re-engage Charles_Peligro — #1 all-time ($4,192 LTV), rebill OFF, expires Feb 18", owner: "Eva / PPV Team", done: false },
+    { text: "Re-engage Charles_Peligro — #1 all-time ($4,192 LTV), rebill off, expires Feb 18", owner: "Eva / PPV Team", done: false },
     { text: "Re-engage mrwan (DIAMOND VIP) — 16 days inactive, $1,030 LTV at risk", owner: "Eva / PPV Team", done: false },
     { text: "Check on Simone — 11 days inactive, $1,174 LTV", owner: "Eva / PPV Team", done: false },
     { text: "Connect email capture to Brevo for churned sub recovery", owner: "Manus + Erik", done: false, auto: true },
@@ -281,23 +281,23 @@ function CollapsibleSection({
 }) {
   const open = isOpen;
   return (
-    <div className="border border-dashed border-amber-500/30 rounded-lg overflow-hidden">
+    <div className="border border-[#D4AF37]/20 rounded-lg overflow-hidden bg-black/20 backdrop-blur-sm">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-3">
           {open ? (
-            <ChevronDown className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <ChevronDown className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 text-[#D4AF37]/60 flex-shrink-0" />
           )}
-          <span className="text-white font-mono text-sm uppercase tracking-wider">{title}</span>
+          <span className="text-white/90 text-sm font-medium tracking-wide">{title}</span>
           {badge}
         </div>
-        {subtitle && <span className="text-white/40 text-xs font-mono hidden sm:block">{subtitle}</span>}
+        {subtitle && <span className="text-white/30 text-xs hidden sm:block">{subtitle}</span>}
       </button>
-      {open && <div className="px-4 pb-4 border-t border-white/5">{children}</div>}
+      {open && <div className="px-4 pb-4 border-t border-[#D4AF37]/10">{children}</div>}
     </div>
   );
 }
@@ -337,19 +337,19 @@ export default function WarRoom() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <h2 className="text-lg font-mono text-white uppercase tracking-wider">
-            Eva Paradis — War Room
+          <h2 className="text-lg text-white tracking-wide" style={{ fontFamily: "'Cinzel', serif" }}>
+            Eva Paradis — <span className="text-[#D4AF37]">Bacheca</span>
           </h2>
         </div>
         <div className="flex items-center gap-4">
           <button
             onClick={toggleAll}
-            className="text-xs font-mono text-amber-400 hover:text-amber-300 uppercase tracking-wider"
+            className="text-xs text-[#D4AF37]/70 hover:text-[#D4AF37] tracking-wider transition-colors"
           >
             {allOpen ? "Collapse All" : "Expand All"}
           </button>
-          <span className="text-xs font-mono text-white/30">
-            Last Updated: Feb 13, 2026
+          <span className="text-xs text-white/25">
+            Updated Feb 13, 2026
           </span>
         </div>
       </div>
@@ -384,7 +384,7 @@ export default function WarRoom() {
       {/* ── Priority Actions ── */}
       <CollapsibleSection
         title="Priority Actions"
-        badge={<span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-600/80 text-white">Action Required</span>}
+        badge={<span className="px-2 py-0.5 rounded text-[10px] uppercase bg-[#D4AF37]/20 text-[#D4AF37]">Next Steps</span>}
         subtitle="Ordered by revenue impact — whale retention first"
         isOpen={openSections.has("priority")}
         onToggle={() => toggleSection("priority")}
@@ -581,10 +581,9 @@ export default function WarRoom() {
                 <p className="text-white/40 text-[10px]">Meta / X pixels</p>
               </div>
             </div>
-            <div className="mt-3 p-3 rounded bg-red-500/10 border border-red-500/20">
-              <p className="text-red-400 text-xs">
-                <AlertTriangle className="w-3 h-3 inline mr-1" />
-                <strong>No recovery loop exists.</strong> Every visitor who doesn't subscribe on their first visit is lost permanently. Email capture + retargeting pixels would create a second chance to convert. This is the single biggest revenue leak in the funnel.
+            <div className="mt-3 p-3 rounded bg-[#D4AF37]/5 border border-[#D4AF37]/15">
+              <p className="text-white/50 text-xs">
+                Recovery loop not yet active. Email capture and retargeting pixels would create a second conversion opportunity for visitors who don't subscribe on their first visit.
               </p>
             </div>
           </div>
@@ -651,10 +650,9 @@ export default function WarRoom() {
               </tbody>
             </table>
           </div>
-          <div className="mt-3 p-3 rounded bg-amber-500/10 border border-amber-500/20">
-            <p className="text-amber-400 text-xs">
-              <AlertTriangle className="w-3 h-3 inline mr-1" />
-              <strong>Subscription revenue is declining (-15.2%).</strong> Subs are the loss-leader funnel entry — most come in at $3 or free. But PPV ($4,546) and tips ($1,755) depend on having subscribers to sell to. If the sub base shrinks, all revenue follows.
+          <div className="mt-3 p-3 rounded bg-[#D4AF37]/5 border border-[#D4AF37]/15">
+            <p className="text-[#D4AF37]/70 text-xs">
+              Subscription revenue down 15.2%. Subs are the funnel entry at $3 or free - PPV ($4,546) and tips ($1,755) depend on maintaining subscriber volume.
             </p>
           </div>
         </div>
@@ -687,10 +685,9 @@ export default function WarRoom() {
               <p className="text-2xl font-bold text-white font-mono">$272,883</p>
             </div>
           </div>
-          <div className="p-3 rounded bg-amber-500/10 border border-amber-500/20">
-            <p className="text-amber-400 text-xs">
-              <AlertTriangle className="w-3 h-3 inline mr-1" />
-              <strong>83.5% of subscribers churn after their first billing period.</strong> With most entering at $3 or free, the window to convert them into PPV buyers is narrow. The funnel depends on immediate engagement after subscription.
+          <div className="p-3 rounded bg-[#D4AF37]/5 border border-[#D4AF37]/15">
+            <p className="text-[#D4AF37]/70 text-xs">
+              83.5% of subscribers churn after their first billing period. With most entering at $3 or free, early engagement after subscription is key to PPV conversion.
             </p>
           </div>
         </div>
@@ -698,11 +695,11 @@ export default function WarRoom() {
 
       {/* ── Whale Watch ── */}
       <CollapsibleSection
-        title="Whale Watch"
+        title="Top Fans"
         badge={
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-white/60">15</span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-600/80 text-white">3 AT RISK</span>
+            <span className="text-xs text-white/50">15</span>
+            <span className="px-2 py-0.5 rounded text-[10px] bg-[#D4AF37]/20 text-[#D4AF37]">3 need attention</span>
           </div>
         }
         subtitle="Top 15 fans by lifetime value"
@@ -713,13 +710,12 @@ export default function WarRoom() {
           {WHALES.map((w) => (
             <div
               key={w.name}
-              className={`p-3 rounded border ${
-                w.risk === "HIGH"
-                  ? "border-red-500/30 bg-red-500/5"
-                  : w.risk === "MEDIUM"
+              className={`p-3 rounded border ${w.risk === "HIGH"
+                ? "border-red-500/30 bg-red-500/5"
+                : w.risk === "MEDIUM"
                   ? "border-amber-500/30 bg-amber-500/5"
                   : "border-white/10 bg-white/5"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -903,9 +899,8 @@ export default function WarRoom() {
               <div className="mt-2 mb-1">
                 <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${
-                      m.pct >= 70 ? "bg-green-400" : m.pct >= 40 ? "bg-amber-400" : "bg-red-400"
-                    }`}
+                    className={`h-full rounded-full transition-all ${m.pct >= 70 ? "bg-green-400" : m.pct >= 40 ? "bg-amber-400" : "bg-red-400"
+                      }`}
                     style={{ width: `${Math.min(m.pct, 100)}%` }}
                   />
                 </div>
@@ -921,8 +916,8 @@ export default function WarRoom() {
 
       {/* Footer */}
       <div className="text-center py-4">
-        <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">
-          Eva Paradis Digital Authority Initiative — Strategy Implementation Dashboard — Confidential
+        <p className="text-[10px] text-white/15 tracking-widest" style={{ fontFamily: "'Cinzel', serif" }}>
+          Eva Paradis — Confidential
         </p>
       </div>
     </div>

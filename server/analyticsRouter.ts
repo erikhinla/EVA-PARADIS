@@ -67,8 +67,7 @@ export const analyticsRouter = router({
       const payload = {
         email,
         phone: maybeString(input.phone),
-        source: maybeString(input.source) ?? "bridge_return",
-        utm_source: maybeString(input.utmSource),
+        utm_source: maybeString(input.source) ?? maybeString(input.utmSource) ?? "bridge_return",
         utm_medium: maybeString(input.utmMedium),
         utm_campaign: maybeString(input.utmCampaign),
         referrer: maybeString(input.referrer),

@@ -1,4 +1,6 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local", override: true });
+dotenv.config();
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "./routers";
@@ -68,11 +70,11 @@ app.get("/api/oauth/callback", async (req, res) => {
     }
 
     await db.upsertUser({
-      openId: userInfo.openId,
+      open_id: userInfo.openId,
       name: userInfo.name || null,
       email: userInfo.email ?? null,
-      loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-      lastSignedIn: new Date(),
+      login_method: userInfo.loginMethod ?? userInfo.platform ?? null,
+      last_signed_in: new Date().toISOString(),
     });
 
     const sessionToken = await sdk.createSessionToken(userInfo.openId, {

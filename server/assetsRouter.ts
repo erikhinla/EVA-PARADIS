@@ -1,29 +1,31 @@
 import { z } from "zod";
-import { eq, desc } from "drizzle-orm";
 import { publicProcedure, router } from "./_core/trpc";
-import { getDb } from "./db";
-import { assets, Asset, InsertAsset } from "../drizzle/schema";
-import { storagePut } from "./storage";
+import { getSupabaseClient } from "./_core/supabase";
+import { storagePut, storageDelete } from "./storage";
+import type { Asset, InsertAsset } from "../shared/types";
 
 /**
- * Assets router - handles content upload and management
+ * Assets router — handles content upload and management
+ * Now uses Supabase PostgreSQL instead of Drizzle/MySQL.
  */
 export const assetsRouter = router({
   /**
-   * List all assets
+   * List all assets, newest first
    */
-  list: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+  list: publicProcedure.query(async (): Promise<Asset[]> => {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("assets")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[Assets] List failed:", error);
+      throw new Error("Failed to list assets");
     }
 
-    const allAssets = await db
-      .select()
-      .from(assets)
-      .orderBy(desc(assets.createdAt));
-
-    return allAssets;
+    return (data ?? []) as Asset[];
   }),
 
   /**
@@ -31,28 +33,26 @@ export const assetsRouter = router({
    */
   get: publicProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+    .query(async ({ input }): Promise<Asset> => {
+      const supabase = getSupabaseClient();
 
-      const result = await db
-        .select()
-        .from(assets)
-        .where(eq(assets.id, input.id))
-        .limit(1);
+      const { data, error } = await supabase
+        .from("assets")
+        .select("*")
+        .eq("id", input.id)
+        .single();
 
-      if (result.length === 0) {
+      if (error || !data) {
         throw new Error("Asset not found");
       }
 
-      return result[0];
+      return data as Asset;
     }),
 
   /**
-   * Upload a new asset
-   * Accepts base64 encoded file data
+   * Upload a new asset.
+   * Accepts base64-encoded file data, stores it in Supabase Storage,
+   * and creates a database record.
    */
   upload: publicProcedure
     .input(
@@ -64,10 +64,7 @@ export const assetsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+      const supabase = getSupabaseClient();
 
       // Decode base64 data
       const buffer = Buffer.from(input.fileData, "base64");
@@ -78,24 +75,34 @@ export const assetsRouter = router({
       const sanitizedName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
       const fileKey = `assets/${timestamp}-${sanitizedName}`;
 
-      // Upload to storage
+      // Upload to Supabase Storage
       const { url: fileUrl } = await storagePut(fileKey, buffer, input.fileType);
 
       // Create database record
       const newAsset: InsertAsset = {
-        fileKey,
-        fileUrl,
-        fileName: input.fileName,
-        fileType: input.fileType,
-        fileSize,
-        conceptName: input.conceptName,
+        file_key: fileKey,
+        file_url: fileUrl,
+        file_name: input.fileName,
+        file_type: input.fileType,
+        file_size: fileSize,
+        concept_name: input.conceptName,
         status: "ready",
+        storage_path: fileKey,
       };
 
-      const result = await db.insert(assets).values(newAsset);
+      const { data, error } = await supabase
+        .from("assets")
+        .insert(newAsset)
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("[Assets] Insert failed:", error);
+        throw new Error("Failed to create asset record");
+      }
 
       return {
-        id: result[0].insertId,
+        id: data.id,
         fileUrl,
         fileKey,
       };
@@ -112,15 +119,16 @@ export const assetsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+      const supabase = getSupabaseClient();
 
-      await db
-        .update(assets)
-        .set({ status: input.status })
-        .where(eq(assets.id, input.id));
+      const { error } = await supabase
+        .from("assets")
+        .update({ status: input.status })
+        .eq("id", input.id);
+
+      if (error) {
+        throw new Error("Failed to update asset status");
+      }
 
       return { success: true };
     }),
@@ -136,31 +144,53 @@ export const assetsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+      const supabase = getSupabaseClient();
 
-      await db
-        .update(assets)
-        .set({ redgifsUrl: input.redgifsUrl })
-        .where(eq(assets.id, input.id));
+      const { error } = await supabase
+        .from("assets")
+        .update({ redgifs_url: input.redgifsUrl })
+        .eq("id", input.id);
+
+      if (error) {
+        throw new Error("Failed to update RedGifs URL");
+      }
 
       return { success: true };
     }),
 
   /**
-   * Delete an asset
+   * Delete an asset (removes from both DB and Storage)
    */
   delete: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
+      const supabase = getSupabaseClient();
+
+      // Get the asset first so we can clean up storage
+      const { data: asset } = await supabase
+        .from("assets")
+        .select("storage_path, file_key")
+        .eq("id", input.id)
+        .single();
+
+      // Delete from database
+      const { error } = await supabase
+        .from("assets")
+        .delete()
+        .eq("id", input.id);
+
+      if (error) {
+        throw new Error("Failed to delete asset");
       }
 
-      await db.delete(assets).where(eq(assets.id, input.id));
+      // Best-effort storage cleanup
+      if (asset?.storage_path) {
+        try {
+          await storageDelete(asset.storage_path);
+        } catch (e) {
+          console.warn("[Assets] Storage cleanup failed:", e);
+        }
+      }
 
       return { success: true };
     }),

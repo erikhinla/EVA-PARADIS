@@ -1,11 +1,10 @@
 import { z } from "zod";
-import { eq, desc } from "drizzle-orm";
 import { publicProcedure, router } from "./_core/trpc";
-import { getDb } from "./db";
-import { posts, assets, Post, InsertPost } from "../drizzle/schema";
+import { getSupabaseClient } from "./_core/supabase";
 import { uploadToRedGifs } from "./redgifs";
 import { postToReddit } from "./reddit";
 import { getPublishingMode } from "./mode";
+import type { Asset, Post, InsertPost } from "../shared/types";
 
 /**
  * Concept tag to Reddit title mapping
@@ -45,45 +44,45 @@ function generateTitle(conceptTag: string): string {
   if (!patterns || patterns.length === 0) {
     return "Check this out";
   }
-  // Pick a random pattern
   return patterns[Math.floor(Math.random() * patterns.length)];
 }
 
 /**
  * Get target subreddit from concept tag
- * Returns the first available subreddit for the concept
  */
 function getTargetSubreddit(conceptTag: string, customSubreddit?: string): string {
   if (customSubreddit) {
-    return customSubreddit.replace(/^r\//, ""); // Remove r/ prefix if present
+    return customSubreddit.replace(/^r\//, "");
   }
-
   const subreddits = CONCEPT_SUBREDDITS[conceptTag.toUpperCase()];
   if (!subreddits || subreddits.length === 0) {
-    return "TransGoneWild"; // Default fallback
+    return "TransGoneWild";
   }
   return subreddits[0];
 }
 
 /**
- * Queue router - handles post publishing orchestration
+ * Queue router — handles post publishing orchestration
+ * Now uses Supabase PostgreSQL instead of Drizzle/MySQL.
  */
 export const queueRouter = router({
   /**
-   * List all posts
+   * List all posts, newest first
    */
-  list: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+  list: publicProcedure.query(async (): Promise<Post[]> => {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[Queue] List failed:", error);
+      throw new Error("Failed to list posts");
     }
 
-    const allPosts = await db
-      .select()
-      .from(posts)
-      .orderBy(desc(posts.createdAt));
-
-    return allPosts;
+    return (data ?? []) as Post[];
   }),
 
   /**
@@ -91,32 +90,29 @@ export const queueRouter = router({
    */
   get: publicProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+    .query(async ({ input }): Promise<Post> => {
+      const supabase = getSupabaseClient();
 
-      const result = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.id, input.id))
-        .limit(1);
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", input.id)
+        .single();
 
-      if (result.length === 0) {
+      if (error || !data) {
         throw new Error("Post not found");
       }
 
-      return result[0];
+      return data as Post;
     }),
 
   /**
-   * Publish an asset to Reddit via RedGifs
-   * This is the main orchestrator that:
-   * 1. Uploads video to RedGifs
-   * 2. Generates Reddit title
-   * 3. Posts to Reddit
-   * 4. Tracks status
+   * Publish an asset to Reddit via RedGifs.
+   * Orchestrates the full flow:
+   * 1. Upload video to RedGifs (auto or manual)
+   * 2. Generate Reddit title
+   * 3. Post to Reddit (auto or manual)
+   * 4. Track status throughout
    */
   publish: publicProcedure
     .input(
@@ -126,28 +122,23 @@ export const queueRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+      const supabase = getSupabaseClient();
 
       // Get the asset
-      const assetResult = await db
-        .select()
-        .from(assets)
-        .where(eq(assets.id, input.assetId))
-        .limit(1);
+      const { data: asset, error: assetError } = await supabase
+        .from("assets")
+        .select("*")
+        .eq("id", input.assetId)
+        .single();
 
-      if (assetResult.length === 0) {
+      if (assetError || !asset) {
         throw new Error("Asset not found");
       }
 
-      const asset = assetResult[0];
-
       // Generate title and determine subreddit
-      const postTitle = generateTitle(asset.conceptName);
+      const postTitle = generateTitle(asset.concept_name);
       const targetSubreddit = getTargetSubreddit(
-        asset.conceptName,
+        asset.concept_name,
         input.targetSubreddit
       );
 
@@ -156,27 +147,39 @@ export const queueRouter = router({
 
       // Determine initial status based on mode
       let initialStatus: "queued" | "awaiting_redgifs_url" = "queued";
-      if (mode.redgifs === 'manual') {
+      if (mode.redgifs === "manual") {
         initialStatus = "awaiting_redgifs_url";
       }
 
-      // Create post record with appropriate status
+      // Create post record
       const newPost: InsertPost = {
-        assetId: input.assetId,
+        asset_id: input.assetId,
         platform: "reddit",
-        targetSubreddit,
-        postTitle,
+        target_subreddit: targetSubreddit,
+        post_title: postTitle,
         status: initialStatus,
       };
 
-      const insertResult = await db.insert(posts).values(newPost);
-      const postId = insertResult[0].insertId;
+      const { data: insertedPost, error: insertError } = await supabase
+        .from("posts")
+        .insert(newPost)
+        .select("id")
+        .single();
+
+      if (insertError || !insertedPost) {
+        console.error("[Queue] Insert failed:", insertError);
+        throw new Error("Failed to create post record");
+      }
+
+      const postId = insertedPost.id;
 
       // If auto mode, start async processing
-      if (mode.redgifs === 'auto' && mode.reddit === 'auto') {
-        processPost(postId, asset, postTitle, targetSubreddit).catch((error) => {
-          console.error(`[Queue] Failed to process post ${postId}:`, error);
-        });
+      if (mode.redgifs === "auto" && mode.reddit === "auto") {
+        processPost(postId, asset as Asset, postTitle, targetSubreddit).catch(
+          (error) => {
+            console.error(`[Queue] Failed to process post ${postId}:`, error);
+          }
+        );
 
         return {
           postId,
@@ -187,17 +190,18 @@ export const queueRouter = router({
         };
       }
 
-      // Manual mode - return instructions
+      // Manual mode — return the post package for the user
       return {
         postId,
         status: initialStatus,
         postTitle,
         targetSubreddit,
         mode: "manual" as const,
-        step: mode.redgifs === 'manual' ? 'redgifs' : 'reddit',
-        message: mode.redgifs === 'manual' 
-          ? 'Upload video to RedGifs and paste URL below'
-          : 'Post to Reddit and paste permalink below',
+        step: mode.redgifs === "manual" ? "redgifs" : "reddit",
+        message:
+          mode.redgifs === "manual"
+            ? "Upload video to RedGifs and paste URL below"
+            : "Post to Reddit and paste permalink below",
       };
     }),
 
@@ -206,19 +210,20 @@ export const queueRouter = router({
    */
   getByAsset: publicProcedure
     .input(z.object({ assetId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
+    .query(async ({ input }): Promise<Post[]> => {
+      const supabase = getSupabaseClient();
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("asset_id", input.assetId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new Error("Failed to get posts for asset");
       }
 
-      const result = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.assetId, input.assetId))
-        .orderBy(desc(posts.createdAt));
-
-      return result;
+      return (data ?? []) as Post[];
     }),
 
   /**
@@ -229,8 +234,8 @@ export const queueRouter = router({
   }),
 
   /**
-   * Save RedGifs URL (manual mode)
-   * Eva pastes the RedGifs URL after manual upload
+   * Save RedGifs URL (manual mode).
+   * Eva pastes the RedGifs URL after manual upload.
    */
   saveRedGifsUrl: publicProcedure
     .input(
@@ -240,69 +245,51 @@ export const queueRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+      const supabase = getSupabaseClient();
 
       // Validate URL contains redgifs.com
       if (!input.redgifsUrl.includes("redgifs.com")) {
-        throw new Error("Invalid RedGifs URL - must contain redgifs.com");
+        throw new Error("Invalid RedGifs URL — must contain redgifs.com");
       }
 
       // Get the post
-      const postResult = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.id, input.postId))
-        .limit(1);
+      const { data: post, error: postError } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", input.postId)
+        .single();
 
-      if (postResult.length === 0) {
+      if (postError || !post) {
         throw new Error("Post not found");
       }
 
-      const post = postResult[0];
-
-      // Get the asset to update its redgifsUrl
-      const assetResult = await db
-        .select()
-        .from(assets)
-        .where(eq(assets.id, post.assetId))
-        .limit(1);
-
-      if (assetResult.length === 0) {
-        throw new Error("Asset not found");
-      }
-
-      const asset = assetResult[0];
-
       // Update asset with RedGifs URL
-      await db
-        .update(assets)
-        .set({ redgifsUrl: input.redgifsUrl })
-        .where(eq(assets.id, asset.id));
+      await supabase
+        .from("assets")
+        .update({ redgifs_url: input.redgifsUrl })
+        .eq("id", post.asset_id);
 
       // Update post status to awaiting Reddit post
-      await db
-        .update(posts)
-        .set({ status: "awaiting_reddit_post" })
-        .where(eq(posts.id, input.postId));
+      await supabase
+        .from("posts")
+        .update({ status: "awaiting_reddit_post" })
+        .eq("id", input.postId);
 
       // Return the post package for manual Reddit posting
       return {
         success: true,
         postPackage: {
-          title: post.postTitle || "",
+          title: post.post_title || "",
           url: input.redgifsUrl,
-          subreddit: post.targetSubreddit || "",
+          subreddit: post.target_subreddit || "",
           nsfw: true,
         },
       };
     }),
 
   /**
-   * Save Reddit permalink (manual mode)
-   * Eva pastes the Reddit permalink after manual posting
+   * Save Reddit permalink (manual mode).
+   * Eva pastes the Reddit permalink after manual posting.
    */
   saveRedditPermalink: publicProcedure
     .input(
@@ -312,78 +299,74 @@ export const queueRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new Error("Database not available");
-      }
+      const supabase = getSupabaseClient();
 
       // Validate URL contains reddit.com
       if (!input.redditUrl.includes("reddit.com")) {
-        throw new Error("Invalid Reddit URL - must contain reddit.com");
+        throw new Error("Invalid Reddit URL — must contain reddit.com");
       }
 
       // Update post with Reddit URL and mark as posted
-      await db
-        .update(posts)
-        .set({
-          postUrl: input.redditUrl,
+      const { error } = await supabase
+        .from("posts")
+        .update({
+          post_url: input.redditUrl,
           status: "posted",
-          postedAt: new Date(),
+          posted_at: new Date().toISOString(),
         })
-        .where(eq(posts.id, input.postId));
+        .eq("id", input.postId);
 
-      return {
-        success: true,
-      };
+      if (error) {
+        throw new Error("Failed to save Reddit permalink");
+      }
+
+      return { success: true };
     }),
 });
 
 /**
- * Process a post asynchronously (auto mode only)
- * Uploads to RedGifs and posts to Reddit
+ * Process a post asynchronously (auto mode only).
+ * Uploads to RedGifs and posts to Reddit.
  */
 async function processPost(
   postId: number,
-  asset: any,
+  asset: Asset,
   postTitle: string,
   targetSubreddit: string
 ): Promise<void> {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
+  const supabase = getSupabaseClient();
 
   try {
     // Update status to uploading_redgifs
-    await db
-      .update(posts)
-      .set({ status: "uploading_redgifs" })
-      .where(eq(posts.id, postId));
+    await supabase
+      .from("posts")
+      .update({ status: "uploading_redgifs" })
+      .eq("id", postId);
 
     // Step 1: Upload to RedGifs if not already uploaded
-    let redgifsUrl = asset.redgifsUrl;
+    let redgifsUrl = asset.redgifs_url;
     if (!redgifsUrl) {
       console.log(`[Queue] Uploading asset ${asset.id} to RedGifs...`);
       redgifsUrl = await uploadToRedGifs(
-        asset.fileUrl,
+        asset.file_url,
         postTitle,
-        [asset.conceptName]
+        [asset.concept_name]
       );
 
       // Update asset with RedGifs URL
-      await db
-        .update(assets)
-        .set({ redgifsUrl })
-        .where(eq(assets.id, asset.id));
+      await supabase
+        .from("assets")
+        .update({ redgifs_url: redgifsUrl })
+        .eq("id", asset.id);
 
       console.log(`[Queue] RedGifs upload complete: ${redgifsUrl}`);
     }
 
     // Update status to posting_reddit
-    await db
-      .update(posts)
-      .set({ status: "posting_reddit" })
-      .where(eq(posts.id, postId));
+    await supabase
+      .from("posts")
+      .update({ status: "posting_reddit" })
+      .eq("id", postId);
 
     // Step 2: Post to Reddit
     console.log(`[Queue] Posting to r/${targetSubreddit}...`);
@@ -391,33 +374,33 @@ async function processPost(
       targetSubreddit,
       postTitle,
       redgifsUrl,
-      true // NSFW flag always true
+      true
     );
 
     console.log(`[Queue] Reddit post created: ${redditPostUrl}`);
 
     // Update post status to posted
-    await db
-      .update(posts)
-      .set({
+    await supabase
+      .from("posts")
+      .update({
         status: "posted",
-        postUrl: redditPostUrl,
-        postedAt: new Date(),
+        post_url: redditPostUrl,
+        posted_at: new Date().toISOString(),
       })
-      .where(eq(posts.id, postId));
+      .eq("id", postId);
 
     console.log(`[Queue] Post ${postId} completed successfully`);
   } catch (error) {
     console.error(`[Queue] Error processing post ${postId}:`, error);
 
-    // Update post status to failed
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    await db
-      .update(posts)
-      .set({
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    await supabase
+      .from("posts")
+      .update({
         status: "failed",
-        errorMessage,
+        error_message: errorMessage,
       })
-      .where(eq(posts.id, postId));
+      .eq("id", postId);
   }
 }

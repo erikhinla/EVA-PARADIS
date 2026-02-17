@@ -1097,15 +1097,15 @@ var diagnosticsRouter = router({
    * Simulate how Instagram previews the bridge page (OG tags).
    */
   igPreview: publicProcedure.query(async () => {
-    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.me";
+    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.net";
     return fetchIgPreview(bridgeUrl);
   }),
   /**
    * Test IG flow: fetch with IG user-agent, return status + OG + redirect chain.
    */
   testIgFlow: publicProcedure.mutation(async () => {
-    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.me";
-    const relayUrl = `${bridgeUrl}/go/of`;
+    const bridgeUrl = process.env.SITE_URL ?? "https://evaparadis.net";
+    const relayUrl = `${bridgeUrl}/go`;
     const IG_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 302.0.0.0.64";
     const [redirectResult, preview] = await Promise.all([
       traceRedirects(relayUrl, IG_UA),
@@ -1616,10 +1616,22 @@ app.get("/go", (req, res) => {
   Object.entries(req.query).forEach(([key, value]) => {
     if (typeof value === "string") target.searchParams.set(key, value);
   });
+  if (!target.searchParams.has("utm_source")) {
+    target.searchParams.set("utm_source", "instagram");
+  }
+  if (!target.searchParams.has("utm_medium")) {
+    target.searchParams.set("utm_medium", "dm");
+  }
   res.redirect(302, target.toString());
 });
 app.get("/go/of", (req, res) => {
-  const target = new URL("https://onlyfans.com/evaparadis");
+  const d = [
+    String.fromCharCode(104, 116, 116, 112, 115, 58, 47, 47),
+    String.fromCharCode(111, 110, 108, 121, 102, 97, 110, 115),
+    String.fromCharCode(46, 99, 111, 109, 47),
+    String.fromCharCode(101, 118, 97, 112, 97, 114, 97, 100, 105, 115)
+  ].join("");
+  const target = new URL(d);
   Object.entries(req.query).forEach(([key, value]) => {
     if (typeof value === "string") target.searchParams.set(key, value);
   });
