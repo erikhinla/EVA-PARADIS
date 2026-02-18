@@ -45,24 +45,35 @@ export default function Out() {
       sessionStorage.removeItem(SESSION_KEY);
     }
 
-    // Set session state
+    // Store session state BEFORE redirecting
     sessionStorage.setItem(SESSION_KEY, Date.now().toString());
     if (Object.keys(utm).length > 0) {
       sessionStorage.setItem("bridge_utm", JSON.stringify(utm));
     }
 
-    // Build destination URL
+    // Register visibilitychange listener BEFORE redirect.
+    // If user switches back to this tab within the window, navigate to /capture.
+    const handleVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const ts = sessionStorage.getItem(SESSION_KEY);
+      if (!ts) return;
+      const elapsed = Date.now() - parseInt(ts, 10);
+      if (elapsed < RETURN_WINDOW_MS) {
+        navigate("/capture");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Build destination URL with UTMs
     const destUrl = new URL(baseUrl);
     Object.keys(utm).forEach((key) => destUrl.searchParams.set(key, utm[key]));
 
-    // Open destination in new tab, show capture in current tab
-    const opened = window.open(destUrl.toString(), "_blank");
-    if (opened) {
-      navigate("/capture");
-    } else {
-      // Popup blocked — fall back to direct redirect
-      window.location.href = destUrl.toString();
-    }
+    // Redirect current tab to OF (deferred capture — only non-converters come back)
+    window.location.href = destUrl.toString();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [navigate]);
 
   return (

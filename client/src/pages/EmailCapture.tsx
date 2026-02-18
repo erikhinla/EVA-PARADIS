@@ -4,24 +4,34 @@ import { Input } from "@/components/ui/input";
 import { Mail, Sparkles, Camera, Heart, ArrowRight, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export default function EmailCapture() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const emailSignup = trpc.analytics.emailSignup.useMutation();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setLoading(true);
-    
-    // Simulate submission - replace with actual email service integration
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setSubmitted(true);
-    setLoading(false);
-    toast.success("You're in! Check your inbox for a special welcome gift.");
+
+    try {
+      await emailSignup.mutateAsync({
+        email: email.trim(),
+        source: "email_capture_page",
+      });
+      setSubmitted(true);
+      toast.success("You're in! Check your inbox for a special welcome gift.");
+    } catch (err) {
+      console.error("[EmailCapture] signup failed:", err);
+      toast.error("Something went wrong — try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePremiumClick = () => {
@@ -37,7 +47,7 @@ export default function EmailCapture() {
           <a href="/" className="text-xl font-bold tracking-tight">
             Eva Paradis
           </a>
-          <Button 
+          <Button
             onClick={handlePremiumClick}
             variant="outline"
             className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
@@ -116,7 +126,7 @@ export default function EmailCapture() {
                     required
                     className="flex-1 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 h-12"
                   />
-                  <Button 
+                  <Button
                     type="submit"
                     disabled={loading}
                     className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold h-12 px-8"
@@ -140,7 +150,7 @@ export default function EmailCapture() {
               <p className="text-zinc-400 mb-6">
                 Check your inbox for your welcome gift. While you wait...
               </p>
-              <Button 
+              <Button
                 onClick={handlePremiumClick}
                 className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
               >
@@ -158,7 +168,7 @@ export default function EmailCapture() {
           <p className="text-zinc-400 mb-4">
             Want instant access to everything?
           </p>
-          <Button 
+          <Button
             onClick={handlePremiumClick}
             variant="outline"
             className="border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-black"

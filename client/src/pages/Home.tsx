@@ -1,19 +1,8 @@
 import { useRef, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
-// Destination assembled at runtime from char codes — prevents static text scanners
-// from finding the platform name in source
-const getDestUrl = () => {
-  const p = [
-    String.fromCharCode(104, 116, 116, 112, 115, 58, 47, 47),
-    String.fromCharCode(111, 110, 108, 121, 102, 97, 110, 115),
-    String.fromCharCode(46, 99, 111, 109, 47),
-    String.fromCharCode(101, 118, 97, 112, 97, 114, 97, 100, 105, 115),
-  ];
-  return p.join("");
-};
-
-const SESSION_KEY = "bridge_redirect_ts";
+// CTA now routes through /out which handles OF redirect + deferred capture
 
 function getUtmParams(): Record<string, string> {
   const params = new URLSearchParams(window.location.search);
@@ -26,8 +15,10 @@ function getUtmParams(): Record<string, string> {
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const visitLoggedRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [, navigate] = useLocation();
+  const trackBridgeEvent = trpc.analytics.trackBridgeEvent.useMutation();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -36,24 +27,46 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  useEffect(() => {
+    if (visitLoggedRef.current) return;
+    if (typeof window === "undefined") return;
+
+    visitLoggedRef.current = true;
+    const utm = getUtmParams();
+    trackBridgeEvent.mutate({
+      eventType: "visit",
+      utmSource: utm.utm_source,
+      utmMedium: utm.utm_medium,
+      utmCampaign: utm.utm_campaign,
+      referrer: document.referrer || undefined,
+      path: window.location.pathname,
+      userAgent: navigator.userAgent,
+    });
+  }, [trackBridgeEvent]);
+
   const handleCta = (e: React.MouseEvent) => {
     e.preventDefault();
 
     const utm = getUtmParams();
 
-    // Store session state for capture page
-    sessionStorage.setItem(SESSION_KEY, Date.now().toString());
-    if (Object.keys(utm).length > 0) {
-      sessionStorage.setItem("bridge_utm", JSON.stringify(utm));
-    }
+    // Fire-and-forget click tracking
+    trackBridgeEvent.mutate({
+      eventType: "of_click",
+      utmSource: utm.utm_source,
+      utmMedium: utm.utm_medium,
+      utmCampaign: utm.utm_campaign,
+      referrer: document.referrer || undefined,
+      path: window.location.pathname,
+      userAgent: navigator.userAgent,
+    });
 
-    // Build destination URL with UTMs
-    const dest = new URL(getDestUrl());
-    Object.keys(utm).forEach((key) => dest.searchParams.set(key, utm[key]));
+    // Build /out URL with dest + current page UTMs
+    const outUrl = new URL("/out", window.location.origin);
+    outUrl.searchParams.set("dest", "onlyfans");
+    Object.keys(utm).forEach((key) => outUrl.searchParams.set(key, utm[key]));
 
-    // Navigate current tab first (synchronous pushState), then open destination
-    navigate("/capture");
-    window.open(dest.toString(), "_blank");
+    // Navigate to /out which handles redirect + deferred capture
+    navigate(outUrl.pathname + outUrl.search);
   };
 
   return (
