@@ -64,7 +64,7 @@ export const analyticsRouter = router({
     .mutation(async ({ input }) => {
       const supabase = getSupabaseClient();
       const email = input.email.trim().toLowerCase();
-      const payload = {
+      const payload: Record<string, unknown> = {
         email,
         phone: maybeString(input.phone),
         utm_source: maybeString(input.source) ?? maybeString(input.utmSource) ?? "bridge_return",
@@ -98,11 +98,11 @@ export const analyticsRouter = router({
       supabase
         .from("leads")
         .select("id", { count: "exact", head: true })
-        .gte("captured_at", oneWeekAgo),
+        .gte("created_at", oneWeekAgo),
       supabase
         .from("leads")
-        .select("id, email, source, captured_at")
-        .order("captured_at", { ascending: false })
+        .select("id, email, utm_source, created_at")
+        .order("created_at", { ascending: false })
         .limit(20),
     ]);
 
@@ -121,8 +121,8 @@ export const analyticsRouter = router({
       recent_leads: (recentResult.data ?? []).map((lead) => ({
         id: lead.id,
         email: lead.email,
-        source: lead.source,
-        captured_at: lead.captured_at,
+        source: lead.utm_source,
+        captured_at: lead.created_at,
       })),
     };
   }),
@@ -136,15 +136,15 @@ export const analyticsRouter = router({
       supabase
         .from("bridge_events")
         .select("id", { count: "exact", head: true })
-        .eq("event_type", "visit"),
+        .in("event_type", ["visit", "page_view"]),
       supabase
         .from("bridge_events")
         .select("id", { count: "exact", head: true })
-        .eq("event_type", "of_click"),
+        .in("event_type", ["of_click", "cta_click"]),
       supabase
         .from("leads")
         .select("id", { count: "exact", head: true })
-        .gte("captured_at", oneWeekAgo),
+        .gte("created_at", oneWeekAgo),
     ]);
 
     if (leadsResult.error || visitResult.error || clickResult.error) {
