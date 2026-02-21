@@ -73,6 +73,17 @@ export default function DashboardContent() {
     },
   });
 
+  const getUploadUrl = trpc.assets.getUploadUrl.useMutation();
+  const confirmUpload = trpc.assets.confirmUpload.useMutation({
+    onSuccess: () => {
+      refetchAssets();
+      toast.success("Asset uploaded successfully");
+    },
+    onError: (error) => {
+      toast.error(`Upload failed: ${error.message}`);
+    },
+  });
+
   const publishToReddit = trpc.queue.publish.useMutation({
     onSuccess: () => {
       refetchPosts();
@@ -133,6 +144,8 @@ export default function DashboardContent() {
     });
   };
 
+  const DIRECT_UPLOAD_THRESHOLD = 3 * 1024 * 1024; // 3MB - use presigned URL above this
+
   const uploadRawAsset = async (file: File) => {
     if (!conceptName.trim()) {
       toast.error("Enter concept name before uploading");
@@ -143,18 +156,49 @@ export default function DashboardContent() {
     setUploadingFiles((prev) => new Set(prev).add(fileId));
 
     try {
-      const base64Data = await fileToBase64(file);
+      if (file.size > DIRECT_UPLOAD_THRESHOLD) {
+        // Large file: use presigned URL to upload directly to Supabase Storage
+        const { signedUrl, fileKey } = await getUploadUrl.mutateAsync({
+          fileName: file.name,
+          fileType: file.type,
+          conceptName: conceptName.trim(),
+        });
 
-      await uploadAsset.mutateAsync({
-        fileName: file.name,
-        fileType: file.type,
-        fileData: base64Data,
-        conceptName: conceptName.trim(),
-      });
+        // Upload directly to Supabase Storage
+        const uploadRes = await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Storage upload failed: ${uploadRes.statusText}`);
+        }
+
+        // Confirm upload and create DB record
+        await confirmUpload.mutateAsync({
+          fileKey,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          conceptName: conceptName.trim(),
+        });
+      } else {
+        // Small file: use base64 upload through API
+        const base64Data = await fileToBase64(file);
+
+        await uploadAsset.mutateAsync({
+          fileName: file.name,
+          fileType: file.type,
+          fileData: base64Data,
+          conceptName: conceptName.trim(),
+        });
+      }
 
       setConceptName("");
     } catch (error) {
       console.error("Upload error:", error);
+      toast.error(`Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setUploadingFiles((prev) => {
         const next = new Set(prev);

@@ -53,12 +53,12 @@ Add my bridge link as a **link sticker** on every story. Text ideas:
 
 ### Hashtags (copy this block)
 ```
-#evaparadis #latina #colombiana #model #contentcreator #exclusive #lingerie #fitness #bodypositivity #selflove #confidence #glamour #sensual #photooftheday #viral #explorepage #reelsinstagram #trending
+#evaparadis #italian #model #contentcreator #exclusive #lingerie #fitness #bodypositivity #selflove #confidence #glamour #sensual #photooftheday #viral #explorepage #reelsinstagram #trending
 ```
 
 ### Reels Hashtags
 ```
-#reels #reelsinstagram #viralreels #trending #explorepage #fyp #model #latina #colombiana #evaparadis
+#reels #reelsinstagram #viralreels #trending #explorepage #fyp #model #italian #evaparadis
 ```
 
 ---
@@ -89,13 +89,13 @@ Come see the full version and SO much more 💋
 
 ### Bio
 ```
-🇨🇴 Eva Paradis | Exclusive content creator
+🇮🇹 Eva Paradis | Exclusive content creator
 💋 See everything → evaparadis.net
 ```
 
 ### Tweet Hashtags
 ```
-#evaparadis #OnlyFans #exclusive #contentcreator #model #latina #NSFW
+#evaparadis #OnlyFans #exclusive #contentcreator #model #italian #NSFW
 ```
 
 ### Tweet Template
