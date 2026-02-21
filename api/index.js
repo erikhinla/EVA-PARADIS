@@ -1,5 +1,5 @@
 // server/vercel-entry.ts
-import "dotenv/config";
+import dotenv from "dotenv";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
@@ -37,10 +37,13 @@ import { TRPCError } from "@trpc/server";
 var ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
+  // Supabase
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  // Forge platform (LLM, image gen, notifications, etc.)
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? ""
 };
@@ -186,228 +189,97 @@ var systemRouter = router({
 
 // server/assetsRouter.ts
 import { z as z2 } from "zod";
-import { eq as eq2, desc } from "drizzle-orm";
 
-// server/db.ts
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-
-// drizzle/schema.ts
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
-});
-var assets = mysqlTable("assets", {
-  id: int("id").autoincrement().primaryKey(),
-  fileKey: varchar("fileKey", { length: 512 }).notNull(),
-  // S3 file key
-  fileUrl: text("fileUrl").notNull(),
-  // S3 public URL
-  fileName: varchar("fileName", { length: 255 }).notNull(),
-  fileType: varchar("fileType", { length: 100 }).notNull(),
-  // MIME type
-  fileSize: int("fileSize").notNull(),
-  // bytes
-  conceptName: varchar("conceptName", { length: 255 }).notNull(),
-  // tagging/categorization
-  status: mysqlEnum("status", ["pending", "processing", "ready", "failed"]).default("pending").notNull(),
-  redgifsUrl: text("redgifsUrl"),
-  // RedGifs hosted URL after upload
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-});
-var posts = mysqlTable("posts", {
-  id: int("id").autoincrement().primaryKey(),
-  assetId: int("assetId").notNull().references(() => assets.id),
-  platform: mysqlEnum("platform", ["reddit", "instagram"]).notNull(),
-  targetSubreddit: varchar("targetSubreddit", { length: 255 }),
-  // for Reddit
-  postTitle: text("postTitle"),
-  postUrl: text("postUrl"),
-  // URL to posted content
-  status: mysqlEnum("status", [
-    "queued",
-    "awaiting_redgifs_url",
-    "uploading_redgifs",
-    "awaiting_reddit_post",
-    "posting_reddit",
-    "posted",
-    "failed"
-  ]).default("queued").notNull(),
-  scheduledFor: timestamp("scheduledFor"),
-  // when to post
-  postedAt: timestamp("postedAt"),
-  // actual post time
-  errorMessage: text("errorMessage"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-});
-
-// server/db.ts
-var _db = null;
-async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+// server/_core/supabase.ts
+import { createClient } from "@supabase/supabase-js";
+var supabase = null;
+function ensureEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
   }
-  return _db;
+  return value;
 }
-async function upsertUser(user) {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-  try {
-    const values = {
-      openId: user.openId
-    };
-    const updateSet = {};
-    const textFields = ["name", "email", "loginMethod"];
-    const assignNullable = (field) => {
-      const value = user[field];
-      if (value === void 0) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-    textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== void 0) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+function getSupabaseClient() {
+  if (!supabase) {
+    const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!url) {
+      throw new Error("Missing required environment variable: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL)");
     }
-    if (user.role !== void 0) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
-    }
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet
+    const serviceRoleKey = ensureEnv("SUPABASE_SERVICE_ROLE_KEY");
+    supabase = createClient(url, serviceRoleKey, {
+      auth: {
+        persistSession: false
+      }
     });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
   }
-}
-async function getUserByOpenId(openId) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return void 0;
-  }
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
+  return supabase;
 }
 
 // server/storage.ts
-function getStorageConfig() {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-function buildUploadUrl(baseUrl, relKey) {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-function ensureTrailingSlash(value) {
-  return value.endsWith("/") ? value : `${value}/`;
-}
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "");
-}
-function toFormData(data, contentType, fileName) {
-  const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-function buildAuthHeaders(apiKey) {
-  return { Authorization: `Bearer ${apiKey}` };
-}
+var BUCKET = "eva-assets";
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData
-  });
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
+  const supabase2 = getSupabaseClient();
+  const key = relKey.replace(/^\/+/, "");
+  let blob;
+  if (typeof data === "string") {
+    blob = new Blob([data], { type: contentType });
+  } else {
+    const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    blob = new Blob([ab], { type: contentType });
   }
-  const url = (await response.json()).url;
-  return { key, url };
+  const { error } = await supabase2.storage.from(BUCKET).upload(key, blob, {
+    contentType,
+    upsert: true
+    // Overwrite if exists
+  });
+  if (error) {
+    console.error("[Storage] Upload failed:", error);
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
+  const { data: urlData } = supabase2.storage.from(BUCKET).getPublicUrl(key);
+  return { key, url: urlData.publicUrl };
+}
+async function storageDelete(relKey) {
+  const supabase2 = getSupabaseClient();
+  const key = relKey.replace(/^\/+/, "");
+  const { error } = await supabase2.storage.from(BUCKET).remove([key]);
+  if (error) {
+    console.error("[Storage] Delete failed:", error);
+    throw new Error(`Storage delete failed: ${error.message}`);
+  }
 }
 
 // server/assetsRouter.ts
+var BUCKET2 = "eva-assets";
 var assetsRouter = router({
   /**
-   * List all assets
+   * List all assets, newest first
    */
   list: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+    const supabase2 = getSupabaseClient();
+    const { data, error } = await supabase2.from("assets").select("*").order("created_at", { ascending: false });
+    if (error) {
+      console.error("[Assets] List failed:", error);
+      throw new Error("Failed to list assets");
     }
-    const allAssets = await db.select().from(assets).orderBy(desc(assets.createdAt));
-    return allAssets;
+    return data ?? [];
   }),
   /**
    * Get a single asset by ID
    */
   get: publicProcedure.input(z2.object({ id: z2.number() })).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
-    }
-    const result = await db.select().from(assets).where(eq2(assets.id, input.id)).limit(1);
-    if (result.length === 0) {
+    const supabase2 = getSupabaseClient();
+    const { data, error } = await supabase2.from("assets").select("*").eq("id", input.id).single();
+    if (error || !data) {
       throw new Error("Asset not found");
     }
-    return result[0];
+    return data;
   }),
   /**
-   * Upload a new asset
-   * Accepts base64 encoded file data
+   * Upload a new asset.
+   * Accepts base64-encoded file data, stores it in Supabase Storage,
+   * and creates a database record.
    */
   upload: publicProcedure.input(
     z2.object({
@@ -418,30 +290,97 @@ var assetsRouter = router({
       conceptName: z2.string()
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
-    }
+    const supabase2 = getSupabaseClient();
     const buffer = Buffer.from(input.fileData, "base64");
     const fileSize = buffer.length;
-    const timestamp2 = Date.now();
+    const timestamp = Date.now();
     const sanitizedName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const fileKey = `assets/${timestamp2}-${sanitizedName}`;
+    const fileKey = `assets/${timestamp}-${sanitizedName}`;
     const { url: fileUrl } = await storagePut(fileKey, buffer, input.fileType);
     const newAsset = {
-      fileKey,
-      fileUrl,
-      fileName: input.fileName,
-      fileType: input.fileType,
-      fileSize,
-      conceptName: input.conceptName,
-      status: "ready"
+      file_key: fileKey,
+      file_url: fileUrl,
+      file_name: input.fileName,
+      file_type: input.fileType,
+      file_size: fileSize,
+      concept_name: input.conceptName,
+      status: "ready",
+      storage_path: fileKey
     };
-    const result = await db.insert(assets).values(newAsset);
+    const { data, error } = await supabase2.from("assets").insert(newAsset).select("id").single();
+    if (error) {
+      console.error("[Assets] Insert failed:", error);
+      throw new Error("Failed to create asset record");
+    }
     return {
-      id: result[0].insertId,
+      id: data.id,
       fileUrl,
       fileKey
+    };
+  }),
+  /**
+   * Get a presigned upload URL for direct browser-to-Supabase uploads.
+   * Use this for large files to bypass Vercel's 4.5MB body limit.
+   * Flow: 1) Call getUploadUrl 2) PUT file directly to Supabase 3) Call confirmUpload
+   */
+  getUploadUrl: publicProcedure.input(
+    z2.object({
+      fileName: z2.string(),
+      fileType: z2.string(),
+      conceptName: z2.string()
+    })
+  ).mutation(async ({ input }) => {
+    const supabase2 = getSupabaseClient();
+    const timestamp = Date.now();
+    const sanitizedName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const fileKey = `assets/${timestamp}-${sanitizedName}`;
+    const { data, error } = await supabase2.storage.from(BUCKET2).createSignedUploadUrl(fileKey);
+    if (error) {
+      console.error("[Assets] Signed URL failed:", error);
+      throw new Error("Failed to create upload URL");
+    }
+    return {
+      signedUrl: data.signedUrl,
+      token: data.token,
+      fileKey,
+      fileType: input.fileType,
+      conceptName: input.conceptName
+    };
+  }),
+  /**
+   * Confirm an upload after the file has been uploaded directly to Supabase Storage.
+   * Creates the database record.
+   */
+  confirmUpload: publicProcedure.input(
+    z2.object({
+      fileKey: z2.string(),
+      fileName: z2.string(),
+      fileType: z2.string(),
+      fileSize: z2.number(),
+      conceptName: z2.string()
+    })
+  ).mutation(async ({ input }) => {
+    const supabase2 = getSupabaseClient();
+    const { data: urlData } = supabase2.storage.from(BUCKET2).getPublicUrl(input.fileKey);
+    const newAsset = {
+      file_key: input.fileKey,
+      file_url: urlData.publicUrl,
+      file_name: input.fileName,
+      file_type: input.fileType,
+      file_size: input.fileSize,
+      concept_name: input.conceptName,
+      status: "ready",
+      storage_path: input.fileKey
+    };
+    const { data, error } = await supabase2.from("assets").insert(newAsset).select("id").single();
+    if (error) {
+      console.error("[Assets] Insert failed:", error);
+      throw new Error("Failed to create asset record");
+    }
+    return {
+      id: data.id,
+      fileUrl: urlData.publicUrl,
+      fileKey: input.fileKey
     };
   }),
   /**
@@ -453,11 +392,11 @@ var assetsRouter = router({
       status: z2.enum(["pending", "processing", "ready", "failed"])
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+    const supabase2 = getSupabaseClient();
+    const { error } = await supabase2.from("assets").update({ status: input.status }).eq("id", input.id);
+    if (error) {
+      throw new Error("Failed to update asset status");
     }
-    await db.update(assets).set({ status: input.status }).where(eq2(assets.id, input.id));
     return { success: true };
   }),
   /**
@@ -469,169 +408,47 @@ var assetsRouter = router({
       redgifsUrl: z2.string()
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+    const supabase2 = getSupabaseClient();
+    const { error } = await supabase2.from("assets").update({ redgifs_url: input.redgifsUrl }).eq("id", input.id);
+    if (error) {
+      throw new Error("Failed to update RedGifs URL");
     }
-    await db.update(assets).set({ redgifsUrl: input.redgifsUrl }).where(eq2(assets.id, input.id));
     return { success: true };
   }),
   /**
-   * Delete an asset
+   * Delete an asset (removes from both DB and Storage)
    */
   delete: publicProcedure.input(z2.object({ id: z2.number() })).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+    const supabase2 = getSupabaseClient();
+    const { data: asset } = await supabase2.from("assets").select("storage_path, file_key").eq("id", input.id).single();
+    const { error } = await supabase2.from("assets").delete().eq("id", input.id);
+    if (error) {
+      throw new Error("Failed to delete asset");
     }
-    await db.delete(assets).where(eq2(assets.id, input.id));
+    if (asset?.storage_path) {
+      try {
+        await storageDelete(asset.storage_path);
+      } catch (e) {
+        console.warn("[Assets] Storage cleanup failed:", e);
+      }
+    }
     return { success: true };
   })
 });
 
 // server/queueRouter.ts
 import { z as z3 } from "zod";
-import { eq as eq3, desc as desc2 } from "drizzle-orm";
 
 // server/redgifs.ts
-import axios from "axios";
-var cachedToken = null;
-var tokenExpiry = 0;
-async function getRedGifsToken(apiKey) {
-  if (cachedToken && Date.now() < tokenExpiry) {
-    return cachedToken;
-  }
-  try {
-    const response = await axios.post(
-      "https://api.redgifs.com/v2/auth/temporary",
-      {},
-      {
-        headers: {
-          "Content-Type": "application/json"
-        },
-        timeout: AXIOS_TIMEOUT_MS
-      }
-    );
-    cachedToken = response.data.token;
-    tokenExpiry = Date.now() + 23 * 60 * 60 * 1e3;
-    return cachedToken;
-  } catch (error) {
-    console.error("[RedGifs] Failed to get auth token:", error);
-    throw new Error("Failed to authenticate with RedGifs");
-  }
-}
-async function uploadToRedGifs(videoUrl, title, tags = []) {
-  const apiKey = process.env.REDGIFS_API_KEY;
-  if (!apiKey) {
-    throw new Error("REDGIFS_API_KEY environment variable not set");
-  }
-  try {
-    const token = await getRedGifsToken(apiKey);
-    const response = await axios.post(
-      "https://api.redgifs.com/v2/gifs",
-      {
-        url: videoUrl,
-        title: title.substring(0, 100),
-        // Max 100 chars
-        tags: tags.slice(0, 5)
-        // Max 5 tags
-      },
-      {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        timeout: AXIOS_TIMEOUT_MS * 3
-        // Longer timeout for upload processing
-      }
-    );
-    return response.data.gif.urls.hd || response.data.url;
-  } catch (error) {
-    console.error("[RedGifs] Upload failed:", error);
-    if (axios.isAxiosError(error)) {
-      throw new Error(`RedGifs upload failed: ${error.response?.data?.message || error.message}`);
-    }
-    throw new Error("RedGifs upload failed");
-  }
+async function uploadToRedGifs(_videoUrl, _title, _tags = []) {
+  console.warn("[RedGifs] API access unavailable \u2014 upload skipped");
+  return "";
 }
 
 // server/reddit.ts
-import axios2 from "axios";
-var cachedToken2 = null;
-var tokenExpiry2 = 0;
-async function getRedditToken() {
-  if (cachedToken2 && Date.now() < tokenExpiry2) {
-    return cachedToken2;
-  }
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const username = process.env.REDDIT_USERNAME;
-  const password = process.env.REDDIT_PASSWORD;
-  if (!clientId || !clientSecret || !username || !password) {
-    throw new Error("Reddit credentials not configured in environment variables");
-  }
-  try {
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-    const response = await axios2.post(
-      "https://www.reddit.com/api/v1/access_token",
-      new URLSearchParams({
-        grant_type: "password",
-        username,
-        password
-      }),
-      {
-        headers: {
-          "Authorization": `Basic ${auth}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "EvaParadis:v1.0.0 (by /u/evaparadis)"
-        },
-        timeout: AXIOS_TIMEOUT_MS
-      }
-    );
-    cachedToken2 = response.data.access_token;
-    tokenExpiry2 = Date.now() + (response.data.expires_in - 60) * 1e3;
-    return cachedToken2;
-  } catch (error) {
-    console.error("[Reddit] Failed to get auth token:", error);
-    if (axios2.isAxiosError(error)) {
-      throw new Error(`Reddit auth failed: ${error.response?.data?.error || error.message}`);
-    }
-    throw new Error("Failed to authenticate with Reddit");
-  }
-}
-async function postToReddit(subreddit, title, url, nsfw = true) {
-  try {
-    const token = await getRedditToken();
-    const response = await axios2.post(
-      "https://oauth.reddit.com/api/submit",
-      new URLSearchParams({
-        sr: subreddit,
-        kind: "link",
-        title: title.substring(0, 300),
-        // Reddit title max length
-        url,
-        nsfw: nsfw ? "true" : "false",
-        sendreplies: "false"
-        // Don't send reply notifications
-      }),
-      {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "EvaParadis:v1.0.0 (by /u/evaparadis)"
-        },
-        timeout: AXIOS_TIMEOUT_MS
-      }
-    );
-    return response.data.json.data.url;
-  } catch (error) {
-    console.error("[Reddit] Post failed:", error);
-    if (axios2.isAxiosError(error)) {
-      const errorMsg = error.response?.data?.json?.errors?.[0]?.[1] || error.message;
-      throw new Error(`Reddit post failed: ${errorMsg}`);
-    }
-    throw new Error("Reddit post failed");
-  }
+async function postToReddit(_subreddit, _title, _url, _nsfw = true) {
+  console.warn("[Reddit] API access unavailable \u2014 post skipped");
+  return "";
 }
 
 // server/mode.ts
@@ -686,37 +503,35 @@ function getTargetSubreddit(conceptTag, customSubreddit) {
 }
 var queueRouter = router({
   /**
-   * List all posts
+   * List all posts, newest first
    */
   list: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+    const supabase2 = getSupabaseClient();
+    const { data, error } = await supabase2.from("posts").select("*").order("created_at", { ascending: false });
+    if (error) {
+      console.error("[Queue] List failed:", error);
+      throw new Error("Failed to list posts");
     }
-    const allPosts = await db.select().from(posts).orderBy(desc2(posts.createdAt));
-    return allPosts;
+    return data ?? [];
   }),
   /**
    * Get a single post by ID
    */
   get: publicProcedure.input(z3.object({ id: z3.number() })).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
-    }
-    const result = await db.select().from(posts).where(eq3(posts.id, input.id)).limit(1);
-    if (result.length === 0) {
+    const supabase2 = getSupabaseClient();
+    const { data, error } = await supabase2.from("posts").select("*").eq("id", input.id).single();
+    if (error || !data) {
       throw new Error("Post not found");
     }
-    return result[0];
+    return data;
   }),
   /**
-   * Publish an asset to Reddit via RedGifs
-   * This is the main orchestrator that:
-   * 1. Uploads video to RedGifs
-   * 2. Generates Reddit title
-   * 3. Posts to Reddit
-   * 4. Tracks status
+   * Publish an asset to Reddit via RedGifs.
+   * Orchestrates the full flow:
+   * 1. Upload video to RedGifs (auto or manual)
+   * 2. Generate Reddit title
+   * 3. Post to Reddit (auto or manual)
+   * 4. Track status throughout
    */
   publish: publicProcedure.input(
     z3.object({
@@ -724,18 +539,14 @@ var queueRouter = router({
       targetSubreddit: z3.string().optional()
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
-    }
-    const assetResult = await db.select().from(assets).where(eq3(assets.id, input.assetId)).limit(1);
-    if (assetResult.length === 0) {
+    const supabase2 = getSupabaseClient();
+    const { data: asset, error: assetError } = await supabase2.from("assets").select("*").eq("id", input.assetId).single();
+    if (assetError || !asset) {
       throw new Error("Asset not found");
     }
-    const asset = assetResult[0];
-    const postTitle = generateTitle(asset.conceptName);
+    const postTitle = generateTitle(asset.concept_name);
     const targetSubreddit = getTargetSubreddit(
-      asset.conceptName,
+      asset.concept_name,
       input.targetSubreddit
     );
     const mode = getPublishingMode();
@@ -744,18 +555,24 @@ var queueRouter = router({
       initialStatus = "awaiting_redgifs_url";
     }
     const newPost = {
-      assetId: input.assetId,
+      asset_id: input.assetId,
       platform: "reddit",
-      targetSubreddit,
-      postTitle,
+      target_subreddit: targetSubreddit,
+      post_title: postTitle,
       status: initialStatus
     };
-    const insertResult = await db.insert(posts).values(newPost);
-    const postId = insertResult[0].insertId;
+    const { data: insertedPost, error: insertError } = await supabase2.from("posts").insert(newPost).select("id").single();
+    if (insertError || !insertedPost) {
+      console.error("[Queue] Insert failed:", insertError);
+      throw new Error("Failed to create post record");
+    }
+    const postId = insertedPost.id;
     if (mode.redgifs === "auto" && mode.reddit === "auto") {
-      processPost(postId, asset, postTitle, targetSubreddit).catch((error) => {
-        console.error(`[Queue] Failed to process post ${postId}:`, error);
-      });
+      processPost(postId, asset, postTitle, targetSubreddit).catch(
+        (error) => {
+          console.error(`[Queue] Failed to process post ${postId}:`, error);
+        }
+      );
       return {
         postId,
         status: "queued",
@@ -778,12 +595,12 @@ var queueRouter = router({
    * Get posts for a specific asset
    */
   getByAsset: publicProcedure.input(z3.object({ assetId: z3.number() })).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
+    const supabase2 = getSupabaseClient();
+    const { data, error } = await supabase2.from("posts").select("*").eq("asset_id", input.assetId).order("created_at", { ascending: false });
+    if (error) {
+      throw new Error("Failed to get posts for asset");
     }
-    const result = await db.select().from(posts).where(eq3(posts.assetId, input.assetId)).orderBy(desc2(posts.createdAt));
-    return result;
+    return data ?? [];
   }),
   /**
    * Get current publishing mode (auto or manual)
@@ -792,8 +609,8 @@ var queueRouter = router({
     return getPublishingMode();
   }),
   /**
-   * Save RedGifs URL (manual mode)
-   * Eva pastes the RedGifs URL after manual upload
+   * Save RedGifs URL (manual mode).
+   * Eva pastes the RedGifs URL after manual upload.
    */
   saveRedGifsUrl: publicProcedure.input(
     z3.object({
@@ -801,38 +618,29 @@ var queueRouter = router({
       redgifsUrl: z3.string().url()
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
-    }
+    const supabase2 = getSupabaseClient();
     if (!input.redgifsUrl.includes("redgifs.com")) {
-      throw new Error("Invalid RedGifs URL - must contain redgifs.com");
+      throw new Error("Invalid RedGifs URL \u2014 must contain redgifs.com");
     }
-    const postResult = await db.select().from(posts).where(eq3(posts.id, input.postId)).limit(1);
-    if (postResult.length === 0) {
+    const { data: post, error: postError } = await supabase2.from("posts").select("*").eq("id", input.postId).single();
+    if (postError || !post) {
       throw new Error("Post not found");
     }
-    const post = postResult[0];
-    const assetResult = await db.select().from(assets).where(eq3(assets.id, post.assetId)).limit(1);
-    if (assetResult.length === 0) {
-      throw new Error("Asset not found");
-    }
-    const asset = assetResult[0];
-    await db.update(assets).set({ redgifsUrl: input.redgifsUrl }).where(eq3(assets.id, asset.id));
-    await db.update(posts).set({ status: "awaiting_reddit_post" }).where(eq3(posts.id, input.postId));
+    await supabase2.from("assets").update({ redgifs_url: input.redgifsUrl }).eq("id", post.asset_id);
+    await supabase2.from("posts").update({ status: "awaiting_reddit_post" }).eq("id", input.postId);
     return {
       success: true,
       postPackage: {
-        title: post.postTitle || "",
+        title: post.post_title || "",
         url: input.redgifsUrl,
-        subreddit: post.targetSubreddit || "",
+        subreddit: post.target_subreddit || "",
         nsfw: true
       }
     };
   }),
   /**
-   * Save Reddit permalink (manual mode)
-   * Eva pastes the Reddit permalink after manual posting
+   * Save Reddit permalink (manual mode).
+   * Eva pastes the Reddit permalink after manual posting.
    */
   saveRedditPermalink: publicProcedure.input(
     z3.object({
@@ -840,64 +648,58 @@ var queueRouter = router({
       redditUrl: z3.string().url()
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new Error("Database not available");
-    }
+    const supabase2 = getSupabaseClient();
     if (!input.redditUrl.includes("reddit.com")) {
-      throw new Error("Invalid Reddit URL - must contain reddit.com");
+      throw new Error("Invalid Reddit URL \u2014 must contain reddit.com");
     }
-    await db.update(posts).set({
-      postUrl: input.redditUrl,
+    const { error } = await supabase2.from("posts").update({
+      post_url: input.redditUrl,
       status: "posted",
-      postedAt: /* @__PURE__ */ new Date()
-    }).where(eq3(posts.id, input.postId));
-    return {
-      success: true
-    };
+      posted_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", input.postId);
+    if (error) {
+      throw new Error("Failed to save Reddit permalink");
+    }
+    return { success: true };
   })
 });
 async function processPost(postId, asset, postTitle, targetSubreddit) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
+  const supabase2 = getSupabaseClient();
   try {
-    await db.update(posts).set({ status: "uploading_redgifs" }).where(eq3(posts.id, postId));
-    let redgifsUrl = asset.redgifsUrl;
+    await supabase2.from("posts").update({ status: "uploading_redgifs" }).eq("id", postId);
+    let redgifsUrl = asset.redgifs_url;
     if (!redgifsUrl) {
       console.log(`[Queue] Uploading asset ${asset.id} to RedGifs...`);
       redgifsUrl = await uploadToRedGifs(
-        asset.fileUrl,
+        asset.file_url,
         postTitle,
-        [asset.conceptName]
+        [asset.concept_name]
       );
-      await db.update(assets).set({ redgifsUrl }).where(eq3(assets.id, asset.id));
+      await supabase2.from("assets").update({ redgifs_url: redgifsUrl }).eq("id", asset.id);
       console.log(`[Queue] RedGifs upload complete: ${redgifsUrl}`);
     }
-    await db.update(posts).set({ status: "posting_reddit" }).where(eq3(posts.id, postId));
+    await supabase2.from("posts").update({ status: "posting_reddit" }).eq("id", postId);
     console.log(`[Queue] Posting to r/${targetSubreddit}...`);
     const redditPostUrl = await postToReddit(
       targetSubreddit,
       postTitle,
       redgifsUrl,
       true
-      // NSFW flag always true
     );
     console.log(`[Queue] Reddit post created: ${redditPostUrl}`);
-    await db.update(posts).set({
+    await supabase2.from("posts").update({
       status: "posted",
-      postUrl: redditPostUrl,
-      postedAt: /* @__PURE__ */ new Date()
-    }).where(eq3(posts.id, postId));
+      post_url: redditPostUrl,
+      posted_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", postId);
     console.log(`[Queue] Post ${postId} completed successfully`);
   } catch (error) {
     console.error(`[Queue] Error processing post ${postId}:`, error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    await db.update(posts).set({
+    await supabase2.from("posts").update({
       status: "failed",
-      errorMessage
-    }).where(eq3(posts.id, postId));
+      error_message: errorMessage
+    }).eq("id", postId);
   }
 }
 
@@ -1152,34 +954,6 @@ var diagnosticsRouter = router({
 // server/analyticsRouter.ts
 import { TRPCError as TRPCError3 } from "@trpc/server";
 import { z as z5 } from "zod";
-
-// server/_core/supabase.ts
-import { createClient } from "@supabase/supabase-js";
-var supabase = null;
-function ensureEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
-function getSupabaseClient() {
-  if (!supabase) {
-    const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!url) {
-      throw new Error("Missing required environment variable: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL)");
-    }
-    const serviceRoleKey = ensureEnv("SUPABASE_SERVICE_ROLE_KEY");
-    supabase = createClient(url, serviceRoleKey, {
-      auth: {
-        persistSession: false
-      }
-    });
-  }
-  return supabase;
-}
-
-// server/analyticsRouter.ts
 var bridgeEventInput = z5.object({
   eventType: z5.enum(["visit", "of_click", "cta_click"]).default("visit"),
   utmSource: z5.string().optional(),
@@ -1230,8 +1004,7 @@ var analyticsRouter = router({
     const payload = {
       email,
       phone: maybeString(input.phone),
-      source: maybeString(input.source) ?? "bridge_return",
-      utm_source: maybeString(input.utmSource),
+      utm_source: maybeString(input.source) ?? maybeString(input.utmSource) ?? "bridge_return",
       utm_medium: maybeString(input.utmMedium),
       utm_campaign: maybeString(input.utmCampaign),
       referrer: maybeString(input.referrer)
@@ -1248,8 +1021,8 @@ var analyticsRouter = router({
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3).toISOString();
     const [totalResult, weekResult, recentResult] = await Promise.all([
       supabase2.from("leads").select("id", { count: "exact", head: true }),
-      supabase2.from("leads").select("id", { count: "exact", head: true }).gte("captured_at", oneWeekAgo),
-      supabase2.from("leads").select("id, email, source, captured_at").order("captured_at", { ascending: false }).limit(20)
+      supabase2.from("leads").select("id", { count: "exact", head: true }).gte("created_at", oneWeekAgo),
+      supabase2.from("leads").select("id, email, utm_source, created_at").order("created_at", { ascending: false }).limit(20)
     ]);
     if (totalResult.error || weekResult.error || recentResult.error) {
       console.error("[analytics] leadsStats failed", {
@@ -1265,8 +1038,8 @@ var analyticsRouter = router({
       recent_leads: (recentResult.data ?? []).map((lead) => ({
         id: lead.id,
         email: lead.email,
-        source: lead.source,
-        captured_at: lead.captured_at
+        source: lead.utm_source,
+        captured_at: lead.created_at
       }))
     };
   }),
@@ -1275,9 +1048,9 @@ var analyticsRouter = router({
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3).toISOString();
     const [leadsResult, visitResult, clickResult, weeklyLeadsResult] = await Promise.all([
       supabase2.from("leads").select("id", { count: "exact", head: true }),
-      supabase2.from("bridge_events").select("id", { count: "exact", head: true }).eq("event_type", "visit"),
-      supabase2.from("bridge_events").select("id", { count: "exact", head: true }).eq("event_type", "of_click"),
-      supabase2.from("leads").select("id", { count: "exact", head: true }).gte("captured_at", oneWeekAgo)
+      supabase2.from("bridge_events").select("id", { count: "exact", head: true }).in("event_type", ["visit", "page_view"]),
+      supabase2.from("bridge_events").select("id", { count: "exact", head: true }).in("event_type", ["of_click", "cta_click"]),
+      supabase2.from("leads").select("id", { count: "exact", head: true }).gte("created_at", oneWeekAgo)
     ]);
     if (leadsResult.error || visitResult.error || clickResult.error) {
       console.error("[analytics] snapshot failed", {
@@ -1375,9 +1148,41 @@ var HttpError = class extends Error {
 var ForbiddenError = (msg) => new HttpError(403, msg);
 
 // server/_core/sdk.ts
-import axios3 from "axios";
+import axios from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import { SignJWT, jwtVerify } from "jose";
+
+// server/db.ts
+async function upsertUser(user) {
+  if (!user.open_id) {
+    throw new Error("User open_id is required for upsert");
+  }
+  const supabase2 = getSupabaseClient();
+  const record = {
+    open_id: user.open_id,
+    last_signed_in: user.last_signed_in ?? (/* @__PURE__ */ new Date()).toISOString()
+  };
+  if (user.name !== void 0) record.name = user.name;
+  if (user.email !== void 0) record.email = user.email;
+  if (user.login_method !== void 0) record.login_method = user.login_method;
+  if (user.role !== void 0) record.role = user.role;
+  const { error } = await supabase2.from("users").upsert(record, { onConflict: "open_id" });
+  if (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
+}
+async function getUserByOpenId(openId) {
+  const supabase2 = getSupabaseClient();
+  const { data, error } = await supabase2.from("users").select("*").eq("open_id", openId).limit(1).single();
+  if (error && error.code !== "PGRST116") {
+    console.error("[Database] Failed to get user:", error);
+    return void 0;
+  }
+  return data ?? void 0;
+}
+
+// server/_core/sdk.ts
 var isNonEmptyString2 = (value) => typeof value === "string" && value.length > 0;
 var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -1419,7 +1224,7 @@ var OAuthService = class {
     return data;
   }
 };
-var createOAuthHttpClient = () => axios3.create({
+var createOAuthHttpClient = () => axios.create({
   baseURL: ENV.oAuthServerUrl,
   timeout: AXIOS_TIMEOUT_MS
 });
@@ -1567,11 +1372,11 @@ var SDKServer = class {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await upsertUser({
-          openId: userInfo.openId,
+          open_id: userInfo.openId,
           name: userInfo.name || null,
           email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt
+          login_method: userInfo.loginMethod ?? userInfo.platform ?? null,
+          last_signed_in: signedInAt.toISOString()
         });
         user = await getUserByOpenId(userInfo.openId);
       } catch (error) {
@@ -1583,8 +1388,8 @@ var SDKServer = class {
       throw ForbiddenError("User not found");
     }
     await upsertUser({
-      openId: user.openId,
-      lastSignedIn: signedInAt
+      open_id: user.open_id,
+      last_signed_in: signedInAt.toISOString()
     });
     return user;
   }
@@ -1607,6 +1412,8 @@ async function createContext(opts) {
 }
 
 // server/vercel-entry.ts
+dotenv.config({ path: ".env.local", override: true });
+dotenv.config();
 var app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -1652,11 +1459,11 @@ app.get("/api/oauth/callback", async (req, res) => {
       return;
     }
     await upsertUser({
-      openId: userInfo.openId,
+      open_id: userInfo.openId,
       name: userInfo.name || null,
       email: userInfo.email ?? null,
-      loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-      lastSignedIn: /* @__PURE__ */ new Date()
+      login_method: userInfo.loginMethod ?? userInfo.platform ?? null,
+      last_signed_in: (/* @__PURE__ */ new Date()).toISOString()
     });
     const sessionToken = await sdk.createSessionToken(userInfo.openId, {
       name: userInfo.name || "",

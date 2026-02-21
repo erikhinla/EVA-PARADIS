@@ -14,7 +14,7 @@ Your official website is **[evaparadisxxx.com](https://www.evaparadisxxx.com/)**
 - They track clicks per platform
 - They look clean
 
-Someone taps your smartlink → sees your photo for 1 sec → lands on your OF.
+Someone taps your smartlink, sees your photo for 1 sec, lands on your OF.
 
 ---
 
@@ -30,7 +30,7 @@ POV: you found something better than scrolling 😏🔥
 
 💋 Link in bio
 
-#evaparadis #latina #colombiana #model #contentcreator 
+#evaparadis #italian #model #contentcreator 
 #exclusive #lingerie #glamour #sensual #explorepage #trending
 ```
 
@@ -38,10 +38,10 @@ POV: you found something better than scrolling 😏🔥
 
 ## 🔴 REDDIT
 
-Upload image/video directly. **Link goes in your FIRST COMMENT**, not the title (most subs auto-remove it).
+Upload image/video directly. **Link goes in your FIRST COMMENT**, not the title (most subs auto-remove it). No hashtags on Reddit.
 
 **r/TransGoneWild:**
-> Title: `First time posting here… should I keep going? 😏🔥`
+> Title: `First time posting here... should I keep going? 😏🔥`
 > Comment: `If you like what you see, there's SO much more 💋 👉 evaparadis.net`
 
 **r/Tgirls:**
@@ -61,13 +61,13 @@ evaparadis.net
 ```
 i don't make content for everyone. just the ones who appreciate it 😏
 see for yourself → evaparadis.net
-#evaparadis #exclusive #OnlyFans #contentcreator #latina
+#evaparadis #exclusive #OnlyFans #contentcreator #italian
 ```
 
 ```
 POV: you finally found my page 😘
 evaparadis.net
-#evaparadis #NSFW #OnlyFans #latina
+#evaparadis #NSFW #OnlyFans #italian
 ```
 
 ---
@@ -81,17 +81,17 @@ TikTok won't let you put links in captions. Your bio link is the only clickable 
 **Video caption:**
 ```
 the link in my bio is not for everyone 😏🔥
-#evaparadis #fyp #viral #latina #colombiana #contentcreator #model #trending
+#evaparadis #fyp #viral #italian #contentcreator #model #trending
 ```
 
 ```
 POV: you found my page and now you can't stop scrolling 😘
-#evaparadis #fyp #exclusive #model #colombiana #foryou
+#evaparadis #fyp #exclusive #model #italian #foryou
 ```
 
 ```
 i post things here i can't post there 🫣💋 link in bio
-#evaparadis #contentcreator #latina #fyp #viral #trending #exclusive
+#evaparadis #contentcreator #italian #fyp #viral #trending #exclusive
 ```
 
 ---

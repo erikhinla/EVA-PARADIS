@@ -4,6 +4,8 @@ import { getSupabaseClient } from "./_core/supabase";
 import { storagePut, storageDelete } from "./storage";
 import type { Asset, InsertAsset } from "../shared/types";
 
+const BUCKET = "eva-assets";
+
 /**
  * Assets router — handles content upload and management
  * Now uses Supabase PostgreSQL instead of Drizzle/MySQL.
@@ -105,6 +107,95 @@ export const assetsRouter = router({
         id: data.id,
         fileUrl,
         fileKey,
+      };
+    }),
+
+  /**
+   * Get a presigned upload URL for direct browser-to-Supabase uploads.
+   * Use this for large files to bypass Vercel's 4.5MB body limit.
+   * Flow: 1) Call getUploadUrl 2) PUT file directly to Supabase 3) Call confirmUpload
+   */
+  getUploadUrl: publicProcedure
+    .input(
+      z.object({
+        fileName: z.string(),
+        fileType: z.string(),
+        conceptName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseClient();
+      const timestamp = Date.now();
+      const sanitizedName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const fileKey = `assets/${timestamp}-${sanitizedName}`;
+
+      // Create a signed upload URL (valid for 10 minutes)
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUploadUrl(fileKey);
+
+      if (error) {
+        console.error("[Assets] Signed URL failed:", error);
+        throw new Error("Failed to create upload URL");
+      }
+
+      return {
+        signedUrl: data.signedUrl,
+        token: data.token,
+        fileKey,
+        fileType: input.fileType,
+        conceptName: input.conceptName,
+      };
+    }),
+
+  /**
+   * Confirm an upload after the file has been uploaded directly to Supabase Storage.
+   * Creates the database record.
+   */
+  confirmUpload: publicProcedure
+    .input(
+      z.object({
+        fileKey: z.string(),
+        fileName: z.string(),
+        fileType: z.string(),
+        fileSize: z.number(),
+        conceptName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseClient();
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(input.fileKey);
+
+      const newAsset: InsertAsset = {
+        file_key: input.fileKey,
+        file_url: urlData.publicUrl,
+        file_name: input.fileName,
+        file_type: input.fileType,
+        file_size: input.fileSize,
+        concept_name: input.conceptName,
+        status: "ready",
+        storage_path: input.fileKey,
+      };
+
+      const { data, error } = await supabase
+        .from("assets")
+        .insert(newAsset)
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("[Assets] Insert failed:", error);
+        throw new Error("Failed to create asset record");
+      }
+
+      return {
+        id: data.id,
+        fileUrl: urlData.publicUrl,
+        fileKey: input.fileKey,
       };
     }),
 
