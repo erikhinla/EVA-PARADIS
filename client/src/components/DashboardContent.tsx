@@ -5,8 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import {
-  Upload, FileVideo, X, Download, ExternalLink, Copy, Check,
-  AlertCircle, Clock, CheckCircle2, XCircle, Loader2
+  Upload,
+  FileVideo,
+  X,
+  Download,
+  ExternalLink,
+  Copy,
+  Check,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -74,6 +84,7 @@ export default function DashboardContent() {
   });
 
   const getUploadUrl = trpc.assets.getUploadUrl.useMutation();
+
   const confirmUpload = trpc.assets.confirmUpload.useMutation({
     onSuccess: () => {
       refetchAssets();
@@ -137,7 +148,7 @@ export default function DashboardContent() {
       reader.onload = () => {
         const result = reader.result as string;
         // Remove the data:mime/type;base64, prefix
-        const base64 = result.split(',')[1];
+        const base64 = result.split(",")[1];
         resolve(base64);
       };
       reader.onerror = (error) => reject(error);
@@ -167,12 +178,15 @@ export default function DashboardContent() {
         // Upload directly to Supabase Storage
         const uploadRes = await fetch(signedUrl, {
           method: "PUT",
-          headers: { "Content-Type": file.type },
+          headers: {
+            "Content-Type": file.type,
+          },
           body: file,
         });
 
         if (!uploadRes.ok) {
-          throw new Error(`Storage upload failed: ${uploadRes.statusText}`);
+          const errorText = await uploadRes.text().catch(() => "");
+          throw new Error(`Storage upload failed: ${uploadRes.status} ${uploadRes.statusText}${errorText ? `: ${errorText}` : ""}`);
         }
 
         // Confirm upload and create DB record
@@ -186,7 +200,6 @@ export default function DashboardContent() {
       } else {
         // Small file: use base64 upload through API
         const base64Data = await fileToBase64(file);
-
         await uploadAsset.mutateAsync({
           fileName: file.name,
           fileType: file.type,
@@ -194,7 +207,6 @@ export default function DashboardContent() {
           conceptName: conceptName.trim(),
         });
       }
-
       setConceptName("");
     } catch (error) {
       console.error("Upload error:", error);
@@ -211,7 +223,6 @@ export default function DashboardContent() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     const files = Array.from(e.dataTransfer.files);
     files.forEach((file) => {
       if (file.type.startsWith("video/") || file.type.startsWith("image/")) {
@@ -263,7 +274,8 @@ export default function DashboardContent() {
   };
 
   const copyAllForReddit = (title: string, url: string, id: string) => {
-    const text = `Title: ${title}\nURL: ${url}`;
+    const text = `Title: ${title}
+URL: ${url}`;
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -273,21 +285,21 @@ export default function DashboardContent() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "queued":
-        return <Clock className="w-4 h-4 text-amber-400" />;
+        return <Clock className="h-4 w-4" />;
       case "awaiting_redgifs_url":
-        return <Clock className="w-4 h-4 text-blue-400" />;
+        return <Upload className="h-4 w-4" />;
       case "uploading_redgifs":
-        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
+        return <Loader2 className="h-4 w-4 animate-spin" />;
       case "awaiting_reddit_post":
-        return <Clock className="w-4 h-4 text-blue-400" />;
+        return <ExternalLink className="h-4 w-4" />;
       case "posting_reddit":
-        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
+        return <Loader2 className="h-4 w-4 animate-spin" />;
       case "posted":
-        return <CheckCircle2 className="w-4 h-4 text-green-400" />;
+        return <CheckCircle2 className="h-4 w-4" />;
       case "failed":
-        return <XCircle className="w-4 h-4 text-red-400" />;
+        return <XCircle className="h-4 w-4" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+        return <Clock className="h-4 w-4" />;
     }
   };
 
@@ -345,101 +357,108 @@ export default function DashboardContent() {
   const failedPosts = posts.filter((p) => p.status === "failed");
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1005 50%, #0a0a0a 100%)' }}>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
-      <div className="border-b border-white/10 bg-black/20 backdrop-blur-xl">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'Cinzel', serif" }}>Eva Paradis</h1>
-              <p className="text-white/40 text-sm">
-                {activeTab === "warroom" ? "Bacheca" : activeTab === "posting" ? "Posting" : activeTab === "analytics" ? "Analytics" : "Link Health"}
-              </p>
-            </div>
-            <div className="flex items-center gap-6">
-              {/* Mode Indicator Badge - manual override disabled */}
-              <div className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 bg-green-500/20 text-green-400">
-                ⚡ Auto Mode
-              </div>
-              {/* Tab Navigation */}
-              <div className="flex bg-white/5 rounded-lg p-1">
-                <button
-                  onClick={() => setActiveTab("warroom")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "warroom"
-                    ? "bg-[#D4AF37] text-black"
-                    : "text-white/60 hover:text-white"
-                    }`}
-                >
-                  Bacheca
-                </button>
-                <button
-                  onClick={() => setActiveTab("posting")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "posting"
-                    ? "bg-amber-500 text-black"
-                    : "text-white/60 hover:text-white"
-                    }`}
-                >
-                  Posting
-                </button>
-                <button
-                  onClick={() => setActiveTab("analytics")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "analytics"
-                    ? "bg-amber-500 text-black"
-                    : "text-white/60 hover:text-white"
-                    }`}
-                >
-                  Analytics
-                </button>
-                <button
-                  onClick={() => setActiveTab("linkhealth")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "linkhealth"
-                    ? "bg-amber-500 text-black"
-                    : "text-white/60 hover:text-white"
-                    }`}
-                >
-                  Link Health
-                </button>
-              </div>
-              {/* Stats */}
-              {activeTab === "posting" && (
-                <div className="flex gap-6 text-right text-xs text-white/60">
-                  <div>
-                    <span className="text-[#D4AF37] font-bold">{queuedPosts.length}</span> Queued
-                  </div>
-                  <div>
-                    <span className="text-green-400 font-bold">{postedPosts.length}</span> Posted
-                  </div>
-                  <div>
-                    <span className="text-red-400 font-bold">{failedPosts.length}</span> Failed
-                  </div>
-                </div>
-              )}
-            </div>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Eva Paradis</h1>
+          <p className="text-white/40 text-sm">
+            {activeTab === "warroom"
+              ? "Bacheca"
+              : activeTab === "posting"
+              ? "Posting"
+              : activeTab === "analytics"
+              ? "Analytics"
+              : "Link Health"}
+          </p>
+        </div>
+
+        {/* Mode Indicator Badge - manual override disabled */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Auto Mode
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="flex bg-white/5 border border-white/10 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab("warroom")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "warroom" ? "bg-[#D4AF37] text-black" : "text-white/60 hover:text-white"
+            }`}
+          >
+            Bacheca
+          </button>
+          <button
+            onClick={() => setActiveTab("posting")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "posting" ? "bg-amber-500 text-black" : "text-white/60 hover:text-white"
+            }`}
+          >
+            Posting
+          </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "analytics" ? "bg-amber-500 text-black" : "text-white/60 hover:text-white"
+            }`}
+          >
+            Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab("linkhealth")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "linkhealth" ? "bg-amber-500 text-black" : "text-white/60 hover:text-white"
+            }`}
+          >
+            Link Health
+          </button>
+        </div>
+
+        {/* Stats */}
+        {activeTab === "posting" && (
+          <div className="flex gap-4">
+            <div className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-white/60">
+              <span className="text-amber-400 font-bold mr-1">{queuedPosts.length}</span> Queued
+            </div>
+            <div className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-white/60">
+              <span className="text-green-400 font-bold mr-1">{postedPosts.length}</span> Posted
+            </div>
+            <div className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-white/60">
+              <span className="text-red-400 font-bold mr-1">{failedPosts.length}</span> Failed
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="container py-8">
-        {activeTab === "warroom" ? (
-          <WarRoom />
-        ) : activeTab === "analytics" ? (
-          <ConversionAnalytics snapshot={analyticsSnapshot} />
-        ) : activeTab === "linkhealth" ? (
-          <LinkHealthPanel />
-        ) : (
-          <div className="grid gap-6">
+      {activeTab === "warroom" ? (
+        <WarRoom />
+      ) : activeTab === "analytics" ? (
+        <ConversionAnalytics snapshot={analyticsSnapshot} />
+      ) : activeTab === "linkhealth" ? (
+        <LinkHealthPanel />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Column: Upload & Assets */}
+          <div className="lg:col-span-4 space-y-8">
             {/* Ingest Module */}
-            <Card className="p-6 bg-black/40 backdrop-blur-xl border-white/10">
-              <div className="space-y-4">
+            <Card className="p-6 bg-black/40 border-white/5 backdrop-blur-xl">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">Ingest</h2>
-                  <p className="text-white/60 text-sm">Upload raw assets</p>
+                  <h2 className="text-lg font-semibold text-white">Ingest</h2>
+                  <p className="text-white/40 text-xs">Upload raw assets</p>
                 </div>
+                <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Upload className="h-5 w-5 text-amber-500" />
+                </div>
+              </div>
 
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-white/80 text-sm font-medium">Concept Name</label>
+                  <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Concept Name</label>
                   <Input
-                    type="text"
                     placeholder="e.g., Red Carpet Glam, Behind Scenes"
                     value={conceptName}
                     onChange={(e) => setConceptName(e.target.value)}
@@ -454,93 +473,54 @@ export default function DashboardContent() {
                   }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg p-12 transition-all ${isDragging
-                    ? "border-amber-400 bg-amber-400/10"
-                    : "border-white/20 bg-white/5"
-                    }`}
+                  className={`border-2 border-dashed rounded-lg p-12 transition-all flex flex-col items-center justify-center gap-3 cursor-pointer ${
+                    isDragging ? "border-amber-400 bg-amber-400/10" : "border-white/20 bg-white/5 hover:bg-white/10"
+                  }`}
+                  onClick={() => document.getElementById("file-upload")?.click()}
                 >
-                  <input
-                    type="file"
-                    id="file-upload"
-                    multiple
-                    accept="video/*,image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="flex flex-col items-center justify-center cursor-pointer"
-                  >
-                    <Upload className="w-12 h-12 text-white/40 mb-4" />
-                    <p className="text-white text-lg font-medium mb-2">
-                      Drop files or click
-                    </p>
-                    <p className="text-white/60 text-sm">Video/Image</p>
-                  </label>
+                  <input type="file" id="file-upload" multiple accept="video/*,image/*" onChange={handleFileSelect} className="hidden" />
+                  <Upload className="h-8 w-8 text-white/20" />
+                  <div className="text-center">
+                    <p className="text-sm text-white font-medium">Drop files or click</p>
+                    <p className="text-xs text-white/40">Video/Image</p>
+                  </div>
                 </div>
               </div>
             </Card>
 
             {/* Asset Queue */}
             {assets.length > 0 && (
-              <Card className="p-6 bg-black/40 backdrop-blur-xl border-white/10">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white mb-1">Assets</h2>
-                    <p className="text-white/60 text-sm">{assets.length} ready</p>
-                  </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-white/60">Assets</h2>
+                  <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-white/40">{assets.length} ready</span>
+                </div>
 
-                  <div className="space-y-3">
-                    {assets.map((asset) => (
-                      <div
-                        key={asset.id}
-                        className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10"
-                      >
-                        <div className="flex-shrink-0 relative w-20 h-20 rounded-lg overflow-hidden bg-black/40">
+                <div className="space-y-3">
+                  {assets.map((asset) => (
+                    <Card key={asset.id} className="p-4 bg-white/5 border-white/10 group hover:border-amber-500/30 transition-all">
+                      <div className="flex gap-4">
+                        <div className="h-16 w-16 rounded overflow-hidden bg-black flex-shrink-0 border border-white/10">
                           {asset.file_type.startsWith("video/") ? (
-                            <>
-                              <video
-                                src={asset.file_url}
-                                className="w-full h-full object-cover"
-                                muted
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                <FileVideo className="w-6 h-6 text-purple-400" />
-                              </div>
-                            </>
+                            <video src={asset.file_url} className="h-full w-full object-cover opacity-60" />
                           ) : (
-                            <img
-                              src={asset.file_url}
-                              alt={asset.file_name}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={asset.file_url} className="h-full w-full object-cover opacity-60" />
                           )}
                         </div>
-
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-white font-medium truncate">{asset.file_name}</p>
-                            <button
-                              onClick={() => removeAsset(asset.id)}
-                              className="text-white/40 hover:text-white/80"
-                            >
-                              <X className="w-4 h-4" />
+                          <div className="flex items-start justify-between">
+                            <h3 className="text-sm font-medium text-white truncate pr-2">{asset.file_name}</h3>
+                            <button onClick={() => removeAsset(asset.id)} className="text-white/40 hover:text-white/80">
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <p className="text-white/60 text-sm mb-2">
-                            {asset.concept_name}
-                          </p>
+                          <p className="text-[10px] text-amber-500/80 mb-3">{asset.concept_name}</p>
 
                           {asset.status === "ready" && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
-                                Ready
-                              </span>
+                            <div className="flex items-center gap-2">
                               <Select
                                 value={subredditSelections[asset.id] || ""}
-                                onValueChange={(value) =>
-                                  setSubredditSelections(prev => ({ ...prev, [asset.id]: value }))
-                                }
+                                onValueChange={(value) => setSubredditSelections((prev) => ({ ...prev, [asset.id]: value }))}
                               >
                                 <SelectTrigger className="h-7 w-[160px] text-xs bg-white/5 border-white/10 text-white">
                                   <SelectValue placeholder="Select platform" />
@@ -553,6 +533,7 @@ export default function DashboardContent() {
                                   ))}
                                 </SelectContent>
                               </Select>
+
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -561,122 +542,109 @@ export default function DashboardContent() {
                                 className="h-7 text-xs bg-amber-500/20 border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
                               >
                                 {publishToReddit.isPending ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                  <Loader2 className="h-3 w-3 animate-spin" />
                                 ) : (
-                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  <ExternalLink className="h-3 w-3 mr-1" />
                                 )}
-                                Queue for Distribution
+                                Queue
                               </Button>
                             </div>
                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </Card>
+                  ))}
                 </div>
-              </Card>
+              </div>
             )}
+          </div>
 
+          {/* Right Column: Active Queue */}
+          <div className="lg:col-span-8 space-y-8">
             {/* Queued/Publishing Posts */}
             {queuedPosts.length > 0 && (
-              <Card className="p-6 bg-black/40 backdrop-blur-xl border-amber-500/20">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white mb-1">Active Posts</h2>
-                    <p className="text-white/60 text-sm">{queuedPosts.length} in progress</p>
-                  </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-white/60">Active Posts</h2>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
+                    {queuedPosts.length} in progress
+                  </span>
+                </div>
 
-                  <div className="space-y-4">
-                    {queuedPosts.map((post) => {
-                      const asset = assets.find((a) => a.id === post.asset_id);
-                      return (
-                        <div
-                          key={post.id}
-                          className="p-6 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 space-y-4"
-                        >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {queuedPosts.map((post) => {
+                    const asset = assets.find((a) => a.id === post.asset_id);
+                    return (
+                      <Card key={post.id} className="bg-black/40 border-white/5 overflow-hidden flex flex-col">
+                        <div className="p-4 border-b border-white/5 bg-white/[0.02]">
                           {/* Package Header */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(post.status)}`}>
                               {getStatusIcon(post.status)}
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(post.status)}`}>
-                                {getStatusLabel(post.status)}
-                              </span>
-                              <span className="text-white/40 text-xs">
-                                #{post.id}
-                              </span>
+                              {getStatusLabel(post.status)}
                             </div>
-                            <span className="text-white/40 text-xs">
-                              {new Date(post.created_at).toLocaleString()}
-                            </span>
+                            <span className="text-[10px] text-white/20 font-mono">#{post.id}</span>
                           </div>
+                          <div className="text-[10px] text-white/40">{new Date(post.created_at).toLocaleString()}</div>
+                        </div>
 
+                        <div className="p-4 space-y-4 flex-1">
                           {/* Post Title */}
-                          <div className="space-y-2">
-                            <label className="text-white/60 text-xs uppercase tracking-wider">Title</label>
-                            <div className="flex items-center gap-2">
-                              <code className="flex-1 px-3 py-2 rounded bg-black/40 text-white text-sm font-mono border border-white/10">
-                                {post.post_title}
-                              </code>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] uppercase tracking-wider text-white/20 font-semibold">Title</span>
                               <Button
-                                size="sm"
                                 variant="ghost"
+                                size="sm"
                                 onClick={() => copyToClipboard(post.post_title || "", `title-${post.id}`)}
                                 className="h-8 w-8 p-0"
                               >
-                                {copiedId === `title-${post.id}` ? (
-                                  <Check className="w-4 h-4 text-green-400" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
+                                {copiedId === `title-${post.id}` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 text-white/40" />}
                               </Button>
+                            </div>
+                            <div className="p-2 bg-black/60 rounded border border-white/5 text-xs text-white/80 line-clamp-2">
+                              {post.post_title}
                             </div>
                           </div>
 
                           {/* Target Subreddit */}
-                          <div className="space-y-2">
-                            <label className="text-white/60 text-xs uppercase tracking-wider">Subreddit</label>
-                            <div className="flex items-center gap-2">
-                              <code className="px-3 py-2 rounded bg-black/40 text-amber-400 text-sm font-mono border border-white/10">
-                                r/{post.target_subreddit}
-                              </code>
+                          <div className="space-y-1">
+                            <span className="text-[10px] uppercase tracking-wider text-white/20 font-semibold">Subreddit</span>
+                            <div className="flex items-center gap-1.5 text-xs text-white/60">
+                              <div className="w-1 h-1 rounded-full bg-orange-500" />
+                              r/{post.target_subreddit}
                             </div>
                           </div>
 
                           {/* Asset Info */}
                           {asset && (
-                            <div className="space-y-2">
-                              <label className="text-white/60 text-xs uppercase tracking-wider">Asset</label>
-                              <div className="flex items-center gap-2">
-                                <code className="flex-1 px-3 py-2 rounded bg-black/40 text-white/60 text-xs font-mono border border-white/10 truncate">
-                                  {asset.file_name}
-                                </code>
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-wider text-white/20 font-semibold">Asset</span>
+                              <div className="flex items-center gap-2 text-xs text-white/40 truncate">
+                                <FileVideo className="h-3 w-3" />
+                                {asset.file_name}
                               </div>
                             </div>
                           )}
 
                           {/* Status Messages & Manual Wizards */}
-
                           {/* Manual Mode: RedGifs Upload Step */}
                           {post.status === "awaiting_redgifs_url" && asset && (
-                            <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 space-y-3">
+                            <div className="mt-4 pt-4 border-t border-purple-500/20 space-y-3">
                               <div className="flex items-center justify-between">
-                                <label className="text-purple-300 text-sm font-bold uppercase tracking-wider">
-                                  STEP 1: Upload to RedGifs
-                                </label>
+                                <span className="text-[10px] font-bold text-purple-400 uppercase">STEP 1: Upload to RedGifs</span>
                               </div>
-                              <p className="text-white/80 text-sm">
-                                Upload this video to RedGifs, then paste the URL below.
-                              </p>
+                              <p className="text-[10px] text-white/40">Upload this video to RedGifs, then paste the URL below.</p>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => window.open("https://www.redgifs.com/upload", "_blank", "noopener,noreferrer")}
                                 className="h-8 text-xs bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30"
                               >
-                                <ExternalLink className="w-3 h-3 mr-1" />
+                                <Upload className="h-3 w-3 mr-1.5" />
                                 Open RedGifs Upload
                               </Button>
-                              <div className="space-y-2">
+                              <div className="flex gap-2">
                                 <Input
                                   placeholder="Paste RedGifs URL here (e.g., https://redgifs.com/watch/...)"
                                   value={redgifsUrls[post.id] || ""}
@@ -687,90 +655,78 @@ export default function DashboardContent() {
                                   size="sm"
                                   onClick={() => handleSaveRedGifsUrl(post.id)}
                                   disabled={saveRedGifsUrl.isPending}
-                                  className="w-full bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30"
+                                  className="bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30"
                                 >
-                                  {saveRedGifsUrl.isPending ? (
-                                    <>
-                                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    "Save RedGifs URL"
-                                  )}
+                                  {saveRedGifsUrl.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                                 </Button>
                               </div>
-                              <p className="text-blue-300 text-xs flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                ⏳ Waiting for RedGifs URL
-                              </p>
                             </div>
                           )}
 
                           {/* Manual Mode: Reddit Posting Step */}
                           {post.status === "awaiting_reddit_post" && asset && (
-                            <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 space-y-3">
+                            <div className="mt-4 pt-4 border-t border-orange-500/20 space-y-4">
                               <div className="flex items-center justify-between">
-                                <label className="text-orange-300 text-sm font-bold uppercase tracking-wider">
-                                  STEP 2: Post to Reddit
-                                </label>
+                                <span className="text-[10px] font-bold text-orange-400 uppercase">STEP 2: Post to Reddit</span>
                               </div>
 
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-white/60 text-xs">Title:</span>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => copyToClipboard(post.post_title || "", `manual-title-${post.id}`)}
-                                    className="h-6 text-xs"
-                                  >
-                                    {copiedId === `manual-title-${post.id}` ? (
-                                      <><Check className="w-3 h-3 mr-1" /> Copied</>
-                                    ) : (
-                                      <><Copy className="w-3 h-3 mr-1" /> Copy</>
-                                    )}
-                                  </Button>
+                              <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] text-white/20">Title:</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => copyToClipboard(post.post_title || "", `manual-title-${post.id}`)}
+                                      className="h-6 text-xs"
+                                    >
+                                      {copiedId === `manual-title-${post.id}` ? (
+                                        <>
+                                          <Check className="h-2 w-2 mr-1" /> Copied
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="h-2 w-2 mr-1" /> Copy
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                  <div className="text-xs text-white/80 font-mono break-all">{post.post_title}</div>
                                 </div>
-                                <code className="block px-3 py-2 rounded bg-black/40 text-white text-sm font-mono border border-white/10">
-                                  {post.post_title}
-                                </code>
+
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] text-white/20">RedGifs URL:</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => copyToClipboard(asset.redgifs_url || "", `manual-url-${post.id}`)}
+                                      className="h-6 text-xs"
+                                    >
+                                      {copiedId === `manual-url-${post.id}` ? (
+                                        <>
+                                          <Check className="h-2 w-2 mr-1" /> Copied
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="h-2 w-2 mr-1" /> Copy
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                  <div className="text-xs text-blue-400 font-mono break-all">{asset.redgifs_url}</div>
+                                </div>
                               </div>
 
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-white/60 text-xs">RedGifs URL:</span>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => copyToClipboard(asset.redgifs_url || "", `manual-url-${post.id}`)}
-                                    className="h-6 text-xs"
-                                  >
-                                    {copiedId === `manual-url-${post.id}` ? (
-                                      <><Check className="w-3 h-3 mr-1" /> Copied</>
-                                    ) : (
-                                      <><Copy className="w-3 h-3 mr-1" /> Copy</>
-                                    )}
-                                  </Button>
-                                </div>
-                                <code className="block px-3 py-2 rounded bg-black/40 text-white/60 text-xs font-mono border border-white/10 truncate">
-                                  {asset.redgifs_url}
-                                </code>
-                              </div>
-
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-white/60 text-xs">Subreddit: r/{post.target_subreddit}</span>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => window.open(`https://www.reddit.com/r/${post.target_subreddit}/submit`, "_blank", "noopener,noreferrer")}
-                                    className="h-6 text-xs bg-orange-500/20 border-orange-500/30 text-orange-300"
-                                  >
-                                    <ExternalLink className="w-3 h-3 mr-1" />
-                                    Open Subreddit
-                                  </Button>
-                                </div>
-                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(`https://www.reddit.com/r/${post.target_subreddit}/submit`, "_blank", "noopener,noreferrer")}
+                                className="w-full h-8 text-xs bg-orange-500/20 border-orange-500/30 text-orange-300"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1.5" />
+                                Open Subreddit
+                              </Button>
 
                               <Button
                                 size="sm"
@@ -779,150 +735,126 @@ export default function DashboardContent() {
                                 className="w-full h-8 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10"
                               >
                                 {copiedId === `manual-all-${post.id}` ? (
-                                  <><Check className="w-3 h-3 mr-2" /> Copied All</>
+                                  <>
+                                    <Check className="h-3 w-3 mr-1.5" /> Copied All
+                                  </>
                                 ) : (
-                                  <><Copy className="w-3 h-3 mr-2" /> Copy All (Title + URL)</>
+                                  <>
+                                    <Copy className="h-3 w-3 mr-1.5" /> Copy All (Title + URL)
+                                  </>
                                 )}
                               </Button>
 
-                              <div className="space-y-2 pt-2">
-                                <label className="text-white/60 text-xs">After posting, paste Reddit permalink:</label>
-                                <Input
-                                  placeholder="Paste Reddit post URL here (e.g., https://reddit.com/r/...)"
-                                  value={redditUrls[post.id] || ""}
-                                  onChange={(e) => setRedditUrls({ ...redditUrls, [post.id]: e.target.value })}
-                                  className="bg-black/40 border-orange-500/30 text-white placeholder:text-white/40"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveRedditPermalink(post.id)}
-                                  disabled={saveRedditPermalink.isPending}
-                                  className="w-full bg-orange-500/20 border-orange-500/30 text-orange-300 hover:bg-orange-500/30"
-                                >
-                                  {saveRedditPermalink.isPending ? (
-                                    <>
-                                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    "Save Reddit Permalink"
-                                  )}
-                                </Button>
+                              <div className="space-y-2">
+                                <p className="text-[10px] text-white/40 uppercase font-bold">After posting, paste Reddit permalink:</p>
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Paste Reddit post URL here (e.g., https://reddit.com/r/...)"
+                                    value={redditUrls[post.id] || ""}
+                                    onChange={(e) => setRedditUrls({ ...redditUrls, [post.id]: e.target.value })}
+                                    className="bg-black/40 border-orange-500/30 text-white placeholder:text-white/40"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSaveRedditPermalink(post.id)}
+                                    disabled={saveRedditPermalink.isPending}
+                                    className="bg-orange-500/20 border-orange-500/30 text-orange-300 hover:bg-orange-500/30"
+                                  >
+                                    {saveRedditPermalink.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                  </Button>
+                                </div>
                               </div>
-
-                              <p className="text-blue-300 text-xs flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                ⏳ Waiting for Reddit permalink
-                              </p>
                             </div>
                           )}
 
                           {/* Auto Mode: Processing Status */}
                           {(post.status === "uploading_redgifs" || post.status === "posting_reddit") && (
-                            <div className="p-3 rounded bg-blue-500/10 border border-blue-500/20">
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                                <p className="text-blue-300 text-sm">
-                                  {post.status === "uploading_redgifs"
-                                    ? "Uploading to RedGifs..."
-                                    : "Posting to Reddit..."}
-                                </p>
-                              </div>
+                            <div className="mt-4 flex flex-col items-center gap-2 p-4 bg-white/5 rounded border border-white/5">
+                              <Loader2 className="h-5 w-5 text-amber-500 animate-spin" />
+                              <span className="text-[10px] text-white/40 uppercase tracking-widest animate-pulse">
+                                {post.status === "uploading_redgifs" ? "Uploading to RedGifs..." : "Posting to Reddit..."}
+                              </span>
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </Card>
+                    );
+                  })}
                 </div>
-              </Card>
+              </div>
             )}
 
             {/* Posted Packages */}
             {postedPosts.length > 0 && (
-              <Card className="p-6 bg-black/40 backdrop-blur-xl border-green-500/20">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white mb-1">Posted</h2>
-                    <p className="text-white/60 text-sm">{postedPosts.length} successful</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    {postedPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20"
-                      >
-                        <div className="flex items-center gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-green-400" />
-                          <div>
-                            <p className="text-white text-sm font-medium">{post.post_title}</p>
-                            <p className="text-white/60 text-xs">
-                              r/{post.target_subreddit} • {post.posted_at ? new Date(post.posted_at).toLocaleString() : "Recently"}
-                            </p>
-                          </div>
+              <div className="space-y-4">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-white/60 px-1">Posted</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {postedPosts.map((post) => (
+                    <Card key={post.id} className="p-4 bg-white/5 border-white/10 group hover:border-green-500/30 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-white truncate">{post.post_title}</h3>
+                          <p className="text-[10px] text-white/40">
+                            r/{post.target_subreddit} • {post.posted_at ? new Date(post.posted_at).toLocaleString() : "Recently"}
+                          </p>
                         </div>
                         {post.post_url && (
                           <Button
-                            size="sm"
                             variant="ghost"
+                            size="sm"
                             onClick={() => window.open(post.post_url || "", "_blank")}
-                            className="h-8 text-xs"
+                            className="h-8 text-xs text-white/40 hover:text-white hover:bg-white/10"
                           >
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="h-3 w-3" />
                           </Button>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    </Card>
+                  ))}
                 </div>
-              </Card>
+              </div>
             )}
 
             {/* Failed Packages */}
             {failedPosts.length > 0 && (
-              <Card className="p-6 bg-black/40 backdrop-blur-xl border-red-500/20">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white mb-1">Failed</h2>
-                    <p className="text-white/60 text-sm">{failedPosts.length} need attention</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    {failedPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <XCircle className="w-4 h-4 text-red-400" />
-                            <div>
-                              <p className="text-white text-sm font-medium">{post.post_title}</p>
-                              <p className="text-white/60 text-xs">r/{post.target_subreddit}</p>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => queueForDistribution(post.asset_id)}
-                            className="h-8 text-xs bg-orange-500/20 border-orange-500/30 text-orange-400"
-                          >
-                            Retry
-                          </Button>
+              <div className="space-y-4">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-white/60 px-1">Failed</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {failedPosts.map((post) => (
+                    <Card key={post.id} className="p-4 bg-white/5 border-white/10 group hover:border-red-500/30 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                          <AlertCircle className="h-5 w-5 text-red-500" />
                         </div>
-                        {post.error_message && (
-                          <p className="text-red-300 text-xs pl-7">{post.error_message}</p>
-                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-white truncate">{post.post_title}</h3>
+                          <p className="text-[10px] text-white/40">r/{post.target_subreddit}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => queueForDistribution(post.asset_id)}
+                          className="h-8 text-xs bg-orange-500/20 border-orange-500/30 text-orange-400 hover:bg-orange-500/30"
+                        >
+                          Retry
+                        </Button>
                       </div>
-                    ))}
-                  </div>
+                      {post.error_message && (
+                        <div className="mt-3 p-2 bg-red-500/10 rounded border border-red-500/20 text-[10px] text-red-400 font-mono">
+                          {post.error_message}
+                        </div>
+                      )}
+                    </Card>
+                  ))}
                 </div>
-              </Card>
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
