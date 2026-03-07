@@ -4,11 +4,37 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
 import DashboardContent from "@/components/DashboardContent";
+import { DASHBOARD_LOCKED } from "@/const";
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // When DASHBOARD_LOCKED is true the dashboard is inaccessible regardless of
+  // credentials. Flip DASHBOARD_LOCKED to false in client/src/const.ts to
+  // restore access.
+  if (DASHBOARD_LOCKED) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-8 bg-black/40 backdrop-blur-xl border-white/10">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+            <div className="text-center space-y-2">
+              <h1 className="text-2xl font-bold text-white">Dashboard Unavailable</h1>
+              <p className="text-white/60 text-sm">
+                The dashboard is temporarily disabled during maintenance.
+                <br />
+                Please check back later.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const handleLogin = () => {
     // Simple password protection - in production, use proper auth
