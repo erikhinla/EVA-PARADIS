@@ -11,8 +11,20 @@ import Dashboard from "./pages/Dashboard";
 import VipPreview from "./pages/VipPreview";
 import TelegramOptIn from "./pages/TelegramOptIn";
 import EmailCapture from "./pages/EmailCapture";
+import Maintenance from "./pages/Maintenance";
+import { MAINTENANCE_MODE } from "./const";
 
 function Router() {
+  // When MAINTENANCE_MODE is true, all routes serve the static maintenance page.
+  // Flip MAINTENANCE_MODE to false in ./const.ts to restore normal routing.
+  if (MAINTENANCE_MODE) {
+    return (
+      <Switch>
+        <Route component={Maintenance} />
+      </Switch>
+    );
+  }
+
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>

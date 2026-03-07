@@ -1,5 +1,13 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
+// ---------------------------------------------------------------------------
+// Maintenance flags — flip these to false to restore normal operation.
+// ---------------------------------------------------------------------------
+/** When true, all routes redirect to the static "Product Offline" page. */
+export const MAINTENANCE_MODE = true;
+/** When true, the dashboard is locked even for valid credentials. */
+export const DASHBOARD_LOCKED = true;
+
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
